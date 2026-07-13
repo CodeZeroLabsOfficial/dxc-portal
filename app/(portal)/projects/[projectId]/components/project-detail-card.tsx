@@ -7,8 +7,6 @@ import { PageTitle } from "@/components/shared/typography";
 
 type ProjectDetailCardProps = {
   project: Project;
-  clientName: string;
-  managerName: string;
 };
 
 function MetaField({
@@ -35,11 +33,7 @@ function MetaField({
   );
 }
 
-export function ProjectDetailCard({
-  project,
-  clientName,
-  managerName
-}: ProjectDetailCardProps) {
+export function ProjectDetailCard({ project }: ProjectDetailCardProps) {
   const statusLabel = projectStatusNamed[project.status] ?? project.status;
 
   return (
@@ -47,16 +41,11 @@ export function ProjectDetailCard({
       <div className="border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/20 px-4 py-5 sm:px-6 md:px-8 md:py-6">
         <div className="min-w-0 space-y-3">
           <PageTitle>{project.name}</PageTitle>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <span className="font-medium text-foreground">{clientName}</span>
-            <span aria-hidden className="text-muted-foreground/60">
-              ·
-            </span>
-            <span>{managerName}</span>
-            <span aria-hidden className="text-muted-foreground/60">
-              ·
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
             <Badge className="border-0 capitalize">{statusLabel}</Badge>
+            <Badge variant="secondary" className="capitalize">
+              {project.priority}
+            </Badge>
           </div>
         </div>
       </div>

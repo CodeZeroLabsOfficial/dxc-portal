@@ -46,9 +46,6 @@ export function ProjectOverviewPanel({
   risks,
   issues
 }: ProjectOverviewPanelProps) {
-  const done = subtasks.filter((item) => item.status === "done").length;
-  const inProgress = subtasks.filter((item) => item.status === "in_progress").length;
-  const todo = subtasks.filter((item) => item.status === "todo").length;
   const openRisks = risks.filter((item) => item.status !== "closed").length;
   const openIssues = issues.filter(
     (item) => item.status !== "resolved" && item.status !== "closed"
@@ -86,16 +83,13 @@ export function ProjectOverviewPanel({
               <DetailRow label="End" value={formatProjectDate(project.endDate)} />
             </DetailSection>
 
-            <DetailSection label="Work summary">
-              <DetailRow
-                label="Subtasks"
-                value={`${subtasks.length} (${done} done · ${inProgress} in progress · ${todo} todo)`}
-              />
+            <DetailSection label="Project Summary">
+              <DetailRow label="Subtasks" value={subtasks.length} />
               <DetailRow label="Risks" value={`${openRisks} open`} />
               <DetailRow label="Issues" value={`${openIssues} open`} />
             </DetailSection>
 
-            <DetailSection label="Budget">
+            <DetailSection label="Project Budget">
               <DetailRow label="Allocated" value={money(project.budget.allocated)} />
               <DetailRow label="Spent" value={money(project.budget.spent)} />
               <DetailRow label="Remaining" value={money(remaining)} />

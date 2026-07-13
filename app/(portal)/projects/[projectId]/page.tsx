@@ -250,11 +250,7 @@ export default function ProjectDetailPage() {
       </div>
 
       <Tabs defaultValue="overview" className="gap-4">
-        <ProjectDetailCard
-          project={project}
-          clientName={clientName}
-          managerName={managerName}
-        />
+        <ProjectDetailCard project={project} />
 
         <TabsContent value="overview" className="space-y-4">
           <ProjectOverviewPanel
