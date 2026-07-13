@@ -10,12 +10,20 @@ import {
   where,
   Timestamp
 } from "firebase/firestore";
+import { AlertTriangle, Briefcase, CalendarDays, ListTodo } from "lucide-react";
 
 import { db } from "@/lib/firebase";
 import { useActiveClient } from "@/hooks/use-active-client";
 import type { Project, ServiceRequest } from "@/types";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AchievementByYear } from "./achievement-by-year";
 import { ChartProjectOverview } from "./chart-project-overview";
@@ -124,30 +132,60 @@ export function DashboardOverview() {
         <p className="text-muted-foreground text-sm">Select a client to view live metrics.</p>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="*:data-[slot=card]:from-primary/10 grid gap-4 *:data-[slot=card]:bg-gradient-to-t md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Active projects</CardTitle>
+            <CardTitle>Active projects</CardTitle>
+            <CardDescription>
+              {activeClient ? `For ${activeClient.name}` : "Select a client"}
+            </CardDescription>
+            <CardAction>
+              <Briefcase className="text-muted-foreground/50 size-4 lg:size-6" />
+            </CardAction>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{openProjects}</CardContent>
+          <CardContent>
+            <div className="font-display text-2xl lg:text-3xl">{openProjects}</div>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Open requests</CardTitle>
+            <CardTitle>Open requests</CardTitle>
+            <CardDescription>
+              {activeClient ? `For ${activeClient.name}` : "Select a client"}
+            </CardDescription>
+            <CardAction>
+              <ListTodo className="text-muted-foreground/50 size-4 lg:size-6" />
+            </CardAction>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{openRequests}</CardContent>
+          <CardContent>
+            <div className="font-display text-2xl lg:text-3xl">{openRequests}</div>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Overdue requests</CardTitle>
+            <CardTitle>Overdue requests</CardTitle>
+            <CardDescription>
+              {activeClient ? `For ${activeClient.name}` : "Select a client"}
+            </CardDescription>
+            <CardAction>
+              <AlertTriangle className="text-muted-foreground/50 size-4 lg:size-6" />
+            </CardAction>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{overdueRequests}</CardContent>
+          <CardContent>
+            <div className="font-display text-2xl lg:text-3xl">{overdueRequests}</div>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Leave this month</CardTitle>
+            <CardTitle>Leave this month</CardTitle>
+            <CardDescription>Across the organisation</CardDescription>
+            <CardAction>
+              <CalendarDays className="text-muted-foreground/50 size-4 lg:size-6" />
+            </CardAction>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{leaveCount}</CardContent>
+          <CardContent>
+            <div className="font-display text-2xl lg:text-3xl">{leaveCount}</div>
+          </CardContent>
         </Card>
       </div>
 

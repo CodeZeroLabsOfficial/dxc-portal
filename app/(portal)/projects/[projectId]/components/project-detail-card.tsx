@@ -78,23 +78,31 @@ export function ProjectDetailCard({
         <Progress value={project.progress} />
       </div>
 
-      <div className="border-t px-4 sm:px-6 md:px-8">
-        <TabsList
-          variant="line"
-          className="-mb-px h-auto w-full justify-start gap-6 rounded-none bg-transparent p-0">
-          <TabsTrigger value="overview" className="rounded-none px-0 py-4">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="subtasks" className="rounded-none px-0 py-4">
-            Subtasks
-          </TabsTrigger>
-          <TabsTrigger value="risks" className="rounded-none px-0 py-4">
-            Risks & Issues
-          </TabsTrigger>
-          <TabsTrigger value="finance" className="rounded-none px-0 py-4">
-            Finance
-          </TabsTrigger>
-        </TabsList>
+      <div className="border-t">
+        <div className="px-4 sm:px-6 md:px-8">
+          <TabsList className="-mb-0.5 h-auto! gap-6 border-none bg-transparent p-0">
+            <TabsTrigger
+              value="overview"
+              className="data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-4 shadow-none!">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="subtasks"
+              className="data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-4 shadow-none!">
+              Subtasks
+            </TabsTrigger>
+            <TabsTrigger
+              value="risks"
+              className="data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-4 shadow-none!">
+              Risks & Issues
+            </TabsTrigger>
+            <TabsTrigger
+              value="finance"
+              className="data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-4 shadow-none!">
+              Finance
+            </TabsTrigger>
+          </TabsList>
+        </div>
       </div>
     </div>
   );

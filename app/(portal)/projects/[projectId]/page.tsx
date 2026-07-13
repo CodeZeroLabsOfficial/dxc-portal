@@ -7,6 +7,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   serverTimestamp,
   updateDoc
@@ -16,7 +17,8 @@ import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import { averageProgress, toProjectDate } from "@/lib/projects";
 import { useActiveClient } from "@/hooks/use-active-client";
-import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask } from "@/types";
+import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask, UserProfile } from "@/types";
+import { PageBackButton } from "@/components/shared/page-back-button";
 import { PageContent } from "@/components/shared/page-content";
 import { SectionTitle } from "@/components/shared/typography";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,10 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { ProjectActionsMenu } from "./components/project-actions-menu";
+import { ProjectDeleteDialog } from "./components/project-delete-dialog";
 import { ProjectDetailCard } from "./components/project-detail-card";
+import { ProjectEditDialog } from "./components/project-edit-dialog";
 import { ProjectOverviewPanel } from "./components/project-overview-panel";
 
 export default function ProjectDetailPage() {
@@ -41,6 +46,7 @@ export default function ProjectDetailPage() {
   const { activeClient } = useActiveClient();
   const [project, setProject] = useState<Project | null>(null);
   const [managerName, setManagerName] = useState("—");
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [subtasks, setSubtasks] = useState<ProjectSubtask[]>([]);
   const [risks, setRisks] = useState<ProjectRisk[]>([]);
   const [issues, setIssues] = useState<ProjectIssue[]>([]);
@@ -49,6 +55,24 @@ export default function ProjectDetailPage() {
   const [issueTitle, setIssueTitle] = useState("");
   const [allocated, setAllocated] = useState("0");
   const [spent, setSpent] = useState("0");
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  useEffect(() => {
+    void getDocs(collection(db, "users")).then((snap) => {
+      setUsers(
+        snap.docs.map((item) => {
+          const data = item.data();
+          return {
+            uid: item.id,
+            displayName: data.displayName ?? "User",
+            email: data.email ?? "",
+            role: data.role ?? "staff"
+          };
+        })
+      );
+    });
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "projects", projectId), (snap) => {
@@ -242,6 +266,9 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <PageContent>
+        <div className="flex items-center justify-between">
+          <PageBackButton href="/projects" label="Projects" />
+        </div>
         <p className="text-muted-foreground text-sm">Loading…</p>
       </PageContent>
     );
@@ -249,6 +276,14 @@ export default function ProjectDetailPage() {
 
   return (
     <PageContent>
+      <div className="flex items-center justify-between">
+        <PageBackButton href="/projects" label="Projects" />
+        <ProjectActionsMenu
+          onEdit={() => setEditOpen(true)}
+          onDelete={() => setDeleteOpen(true)}
+        />
+      </div>
+
       <Tabs defaultValue="overview" className="gap-4">
         <ProjectDetailCard
           project={project}
@@ -364,6 +399,19 @@ export default function ProjectDetailPage() {
           <Button onClick={() => void saveFinance()}>Save finance</Button>
         </TabsContent>
       </Tabs>
+
+      <ProjectEditDialog
+        project={project}
+        users={users}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+      <ProjectDeleteDialog
+        projectId={project.id}
+        projectName={project.name}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+      />
     </PageContent>
   );
 }
