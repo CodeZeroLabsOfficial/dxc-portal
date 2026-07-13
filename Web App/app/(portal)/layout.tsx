@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import { SiteHeader } from "@/components/layout/header";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { AuthGate } from "@/components/providers/auth-gate";
+import { ActiveClientProvider } from "@/components/providers/active-client-provider";
 
 export default async function PortalLayout({
   children
@@ -20,28 +21,30 @@ export default async function PortalLayout({
   return (
     <AuthProvider>
       <AuthGate>
-        <SidebarProvider
-          defaultOpen={defaultOpen}
-          style={
-            {
-              "--sidebar-width": "calc(var(--spacing) * 64)",
-              "--header-height": "calc(var(--spacing) * 14)",
-              "--content-padding": "calc(var(--spacing) * 4)",
-              "--content-margin": "calc(var(--spacing) * 1.5)",
-              "--content-full-height":
-                "calc(100vh - var(--header-height) - (var(--content-padding) * 2) - (var(--content-margin) * 2))"
-            } as React.CSSProperties
-          }>
-          <AppSidebar variant="inset" />
-          <SidebarInset>
-            <SiteHeader />
-            <div className="bg-muted/40 flex flex-1 flex-col">
-              <div className="@container/main p-(--content-padding) xl:group-data-[theme-content-layout=centered]/layout:container xl:group-data-[theme-content-layout=centered]/layout:mx-auto">
-                {children}
+        <ActiveClientProvider>
+          <SidebarProvider
+            defaultOpen={defaultOpen}
+            style={
+              {
+                "--sidebar-width": "calc(var(--spacing) * 64)",
+                "--header-height": "calc(var(--spacing) * 14)",
+                "--content-padding": "calc(var(--spacing) * 4)",
+                "--content-margin": "calc(var(--spacing) * 1.5)",
+                "--content-full-height":
+                  "calc(100vh - var(--header-height) - (var(--content-padding) * 2) - (var(--content-margin) * 2))"
+              } as React.CSSProperties
+            }>
+            <AppSidebar variant="inset" />
+            <SidebarInset>
+              <SiteHeader />
+              <div className="bg-muted/40 flex flex-1 flex-col">
+                <div className="@container/main p-(--content-padding) xl:group-data-[theme-content-layout=centered]/layout:container xl:group-data-[theme-content-layout=centered]/layout:mx-auto">
+                  {children}
+                </div>
               </div>
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
+            </SidebarInset>
+          </SidebarProvider>
+        </ActiveClientProvider>
       </AuthGate>
     </AuthProvider>
   );
