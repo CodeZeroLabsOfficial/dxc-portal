@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { formatProjectDate } from "@/lib/projects";
+import { formatProjectDate, projectStatusNamed } from "@/lib/projects";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask } from "@/types";
 import { MutedText, SectionTitle } from "@/components/shared/typography";
 
@@ -66,7 +66,11 @@ export function ProjectOverviewPanel({
   return (
     <div className="grid gap-6 sm:grid-cols-2">
       <OverviewBlock title="Status">
-        <StatRow label="Status" value={project.status.replaceAll("_", " ")} capitalize />
+        <StatRow
+          label="Status"
+          value={projectStatusNamed[project.status] ?? project.status}
+        />
+        <StatRow label="Priority" value={project.priority} capitalize />
         <StatRow label="Progress" value={`${project.progress}%`} />
       </OverviewBlock>
 

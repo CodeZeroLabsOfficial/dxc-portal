@@ -5,6 +5,7 @@ import Link from "next/link";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
+import { mapProjectDoc } from "@/lib/projects";
 import type { Project } from "@/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Progress } from "@/components/ui/progress";
@@ -27,19 +28,7 @@ export function ProfileProjects({ userId }: { userId: string }) {
       q,
       (snap) => {
         setProjects(
-          snap.docs.map((item) => {
-            const data = item.data();
-            return {
-              id: item.id,
-              clientId: data.clientId,
-              name: data.name,
-              managerId: data.managerId,
-              status: data.status,
-              progress: data.progress ?? 0,
-              budget: data.budget ?? { allocated: 0, spent: 0, currency: "AUD" },
-              createdBy: data.createdBy
-            };
-          })
+          snap.docs.map((item) => mapProjectDoc(item.id, item.data() as Record<string, unknown>))
         );
         setLoading(false);
       },

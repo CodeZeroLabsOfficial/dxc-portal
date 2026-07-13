@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
 import { db } from "@/lib/firebase";
+import { mapProjectDoc, projectStatusNamed } from "@/lib/projects";
 import { useAuth } from "@/hooks/use-auth";
 import { useActiveClient } from "@/hooks/use-active-client";
 import type { Project, UserProfile } from "@/types";
@@ -86,19 +87,7 @@ export default function ProjectsPage() {
       q,
       (snap) => {
         setProjects(
-          snap.docs.map((item) => {
-            const data = item.data();
-            return {
-              id: item.id,
-              clientId: data.clientId,
-              name: data.name,
-              managerId: data.managerId,
-              status: data.status,
-              progress: data.progress ?? 0,
-              budget: data.budget ?? { allocated: 0, spent: 0, currency: "AUD" },
-              createdBy: data.createdBy
-            };
-          })
+          snap.docs.map((item) => mapProjectDoc(item.id, item.data() as Record<string, unknown>))
         );
         setLoading(false);
       },
@@ -120,6 +109,8 @@ export default function ProjectsPage() {
         name: name.trim(),
         managerId,
         status: "active",
+        priority: "medium",
+        resources: [],
         progress: 0,
         startDate: null,
         endDate: null,
@@ -195,7 +186,9 @@ export default function ProjectsPage() {
                     <Progress value={project.progress} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Badge className="capitalize">{project.status.replace("_", " ")}</Badge>
+                    <Badge className="capitalize">
+                      {projectStatusNamed[project.status] ?? project.status}
+                    </Badge>
                     <span className="text-muted-foreground text-sm">
                       ${project.budget.spent.toLocaleString()} / $
                       {project.budget.allocated.toLocaleString()} {project.budget.currency}

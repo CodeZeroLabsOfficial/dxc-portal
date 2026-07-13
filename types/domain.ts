@@ -1,6 +1,7 @@
 import type { ServiceRequestStage } from "./user";
 
-export type ProjectStatus = "active" | "on_hold" | "completed" | "archived";
+export type ProjectStatus = "active" | "delayed" | "at_risk" | "completed";
+export type ProjectPriority = "low" | "medium" | "high";
 
 export type Project = {
   id: string;
@@ -8,6 +9,8 @@ export type Project = {
   name: string;
   managerId: string;
   status: ProjectStatus;
+  priority: ProjectPriority;
+  resources: string[];
   progress: number;
   startDate?: Date | null;
   endDate?: Date | null;

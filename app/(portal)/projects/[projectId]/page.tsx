@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 
 import { db } from "@/lib/firebase";
-import { averageProgress, toProjectDate } from "@/lib/projects";
+import { averageProgress, mapProjectDoc } from "@/lib/projects";
 import { useActiveClient } from "@/hooks/use-active-client";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask, UserProfile } from "@/types";
 import { PageBackButton } from "@/components/shared/page-back-button";
@@ -37,7 +37,7 @@ import {
 import { ProjectActionsMenu } from "./components/project-actions-menu";
 import { ProjectDeleteDialog } from "./components/project-delete-dialog";
 import { ProjectDetailCard } from "./components/project-detail-card";
-import { ProjectEditDialog } from "./components/project-edit-dialog";
+import { ProjectEditSheet } from "./components/project-edit-sheet";
 import { ProjectOverviewPanel } from "./components/project-overview-panel";
 
 export default function ProjectDetailPage() {
@@ -67,7 +67,8 @@ export default function ProjectDetailPage() {
             uid: item.id,
             displayName: data.displayName ?? "User",
             email: data.email ?? "",
-            role: data.role ?? "staff"
+            role: data.role ?? "staff",
+            jobTitle: data.jobTitle ?? null
           };
         })
       );
@@ -81,20 +82,7 @@ export default function ProjectDetailPage() {
         return;
       }
       const data = snap.data();
-      setProject({
-        id: snap.id,
-        clientId: data.clientId,
-        name: data.name,
-        managerId: data.managerId,
-        status: data.status,
-        progress: data.progress ?? 0,
-        startDate: toProjectDate(data.startDate),
-        endDate: toProjectDate(data.endDate),
-        budget: data.budget ?? { allocated: 0, spent: 0, currency: "AUD" },
-        createdBy: data.createdBy,
-        createdAt: toProjectDate(data.createdAt),
-        updatedAt: toProjectDate(data.updatedAt)
-      });
+      setProject(mapProjectDoc(snap.id, data as Record<string, unknown>));
       setAllocated(String(data.budget?.allocated ?? 0));
       setSpent(String(data.budget?.spent ?? 0));
     });
@@ -400,7 +388,7 @@ export default function ProjectDetailPage() {
         </TabsContent>
       </Tabs>
 
-      <ProjectEditDialog
+      <ProjectEditSheet
         project={project}
         users={users}
         open={editOpen}

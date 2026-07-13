@@ -13,6 +13,12 @@ import {
 import { AlertTriangle, Briefcase, CalendarDays, ListTodo } from "lucide-react";
 
 import { db } from "@/lib/firebase";
+import {
+  formatMonthOverMonthChange,
+  isDateInRange,
+  monthBounds
+} from "@/lib/dashboard-metrics";
+import { mapProjectDoc } from "@/lib/projects";
 import { useActiveClient } from "@/hooks/use-active-client";
 import type { Project, ServiceRequest } from "@/types";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -25,6 +31,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import { AchievementByYear } from "./achievement-by-year";
 import { ChartProjectOverview } from "./chart-project-overview";
 import { ChartProjectEfficiency } from "./chart-project-efficiency";
@@ -38,11 +45,34 @@ function toDate(value: unknown): Date | null {
   return null;
 }
 
+function MonthOverMonthDescription({
+  current,
+  previous
+}: {
+  current: number;
+  previous: number;
+}) {
+  const { label, tone } = formatMonthOverMonthChange(current, previous);
+  return (
+    <CardDescription>
+      <span
+        className={cn(
+          tone === "up" && "text-green-600",
+          tone === "down" && "text-red-600"
+        )}>
+        {label}{" "}
+      </span>
+      from last month
+    </CardDescription>
+  );
+}
+
 export function DashboardOverview() {
   const { activeClient } = useActiveClient();
   const [projects, setProjects] = useState<Project[]>([]);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
-  const [leaveCount, setLeaveCount] = useState(0);
+  const [leaveThisMonth, setLeaveThisMonth] = useState(0);
+  const [leaveLastMonth, setLeaveLastMonth] = useState(0);
 
   useEffect(() => {
     if (!activeClient) {
@@ -64,19 +94,7 @@ export function DashboardOverview() {
 
     const unsubProjects = onSnapshot(projectsQuery, (snap) => {
       setProjects(
-        snap.docs.map((item) => {
-          const data = item.data();
-          return {
-            id: item.id,
-            clientId: data.clientId,
-            name: data.name,
-            managerId: data.managerId,
-            status: data.status,
-            progress: data.progress ?? 0,
-            budget: data.budget ?? { allocated: 0, spent: 0, currency: "AUD" },
-            createdBy: data.createdBy
-          };
-        })
+        snap.docs.map((item) => mapProjectDoc(item.id, item.data() as Record<string, unknown>))
       );
     });
 
@@ -107,23 +125,65 @@ export function DashboardOverview() {
   }, [activeClient]);
 
   useEffect(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    const leaveQuery = query(
+    const thisMonth = monthBounds(new Date(), 0);
+    const lastMonth = monthBounds(new Date(), -1);
+
+    const thisMonthQuery = query(
       collection(db, "calendarEvents"),
       where("type", "==", "annual_leave"),
-      where("start", ">=", Timestamp.fromDate(start)),
-      where("start", "<=", Timestamp.fromDate(end))
+      where("start", ">=", Timestamp.fromDate(thisMonth.start)),
+      where("start", "<=", Timestamp.fromDate(thisMonth.end))
     );
-    const unsubscribe = onSnapshot(leaveQuery, (snap) => setLeaveCount(snap.size));
-    return () => unsubscribe();
+    const lastMonthQuery = query(
+      collection(db, "calendarEvents"),
+      where("type", "==", "annual_leave"),
+      where("start", ">=", Timestamp.fromDate(lastMonth.start)),
+      where("start", "<=", Timestamp.fromDate(lastMonth.end))
+    );
+
+    const unsubThis = onSnapshot(thisMonthQuery, (snap) => setLeaveThisMonth(snap.size));
+    const unsubLast = onSnapshot(lastMonthQuery, (snap) => setLeaveLastMonth(snap.size));
+    return () => {
+      unsubThis();
+      unsubLast();
+    };
   }, []);
+
+  const thisMonth = monthBounds(new Date(), 0);
+  const lastMonth = monthBounds(new Date(), -1);
 
   const openProjects = projects.filter((item) => item.status === "active").length;
   const openRequests = requests.filter((item) => item.stage !== "completed").length;
   const overdueRequests = requests.filter(
     (item) => item.dueDate && item.dueDate < new Date() && item.stage !== "completed"
+  ).length;
+
+  const projectsCreatedThisMonth = projects.filter((item) =>
+    isDateInRange(item.createdAt, thisMonth.start, thisMonth.end)
+  ).length;
+  const projectsCreatedLastMonth = projects.filter((item) =>
+    isDateInRange(item.createdAt, lastMonth.start, lastMonth.end)
+  ).length;
+
+  const requestsCreatedThisMonth = requests.filter((item) =>
+    isDateInRange(item.createdAt, thisMonth.start, thisMonth.end)
+  ).length;
+  const requestsCreatedLastMonth = requests.filter((item) =>
+    isDateInRange(item.createdAt, lastMonth.start, lastMonth.end)
+  ).length;
+
+  const overdueDueThisMonth = requests.filter(
+    (item) =>
+      item.stage !== "completed" &&
+      item.dueDate &&
+      item.dueDate < new Date() &&
+      isDateInRange(item.dueDate, thisMonth.start, thisMonth.end)
+  ).length;
+  const overdueDueLastMonth = requests.filter(
+    (item) =>
+      item.stage !== "completed" &&
+      item.dueDate &&
+      isDateInRange(item.dueDate, lastMonth.start, lastMonth.end)
   ).length;
 
   return (
@@ -136,9 +196,10 @@ export function DashboardOverview() {
         <Card>
           <CardHeader>
             <CardTitle>Active projects</CardTitle>
-            <CardDescription>
-              {activeClient ? `For ${activeClient.name}` : "Select a client"}
-            </CardDescription>
+            <MonthOverMonthDescription
+              current={projectsCreatedThisMonth}
+              previous={projectsCreatedLastMonth}
+            />
             <CardAction>
               <Briefcase className="text-muted-foreground/50 size-4 lg:size-6" />
             </CardAction>
@@ -150,9 +211,10 @@ export function DashboardOverview() {
         <Card>
           <CardHeader>
             <CardTitle>Open requests</CardTitle>
-            <CardDescription>
-              {activeClient ? `For ${activeClient.name}` : "Select a client"}
-            </CardDescription>
+            <MonthOverMonthDescription
+              current={requestsCreatedThisMonth}
+              previous={requestsCreatedLastMonth}
+            />
             <CardAction>
               <ListTodo className="text-muted-foreground/50 size-4 lg:size-6" />
             </CardAction>
@@ -164,9 +226,10 @@ export function DashboardOverview() {
         <Card>
           <CardHeader>
             <CardTitle>Overdue requests</CardTitle>
-            <CardDescription>
-              {activeClient ? `For ${activeClient.name}` : "Select a client"}
-            </CardDescription>
+            <MonthOverMonthDescription
+              current={overdueDueThisMonth}
+              previous={overdueDueLastMonth}
+            />
             <CardAction>
               <AlertTriangle className="text-muted-foreground/50 size-4 lg:size-6" />
             </CardAction>
@@ -178,13 +241,13 @@ export function DashboardOverview() {
         <Card>
           <CardHeader>
             <CardTitle>Leave this month</CardTitle>
-            <CardDescription>Across the organisation</CardDescription>
+            <MonthOverMonthDescription current={leaveThisMonth} previous={leaveLastMonth} />
             <CardAction>
               <CalendarDays className="text-muted-foreground/50 size-4 lg:size-6" />
             </CardAction>
           </CardHeader>
           <CardContent>
-            <div className="font-display text-2xl lg:text-3xl">{leaveCount}</div>
+            <div className="font-display text-2xl lg:text-3xl">{leaveThisMonth}</div>
           </CardContent>
         </Card>
       </div>

@@ -1,9 +1,9 @@
+import { formatProjectDate, projectStatusNamed } from "@/lib/projects";
+import type { Project } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageTitle } from "@/components/shared/typography";
-import { formatProjectDate } from "@/lib/projects";
-import type { Project } from "@/types";
 
 type ProjectDetailCardProps = {
   project: Project;
@@ -40,7 +40,7 @@ export function ProjectDetailCard({
   clientName,
   managerName
 }: ProjectDetailCardProps) {
-  const statusLabel = project.status.replaceAll("_", " ");
+  const statusLabel = projectStatusNamed[project.status] ?? project.status;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-card/60 shadow-sm backdrop-blur-sm">
