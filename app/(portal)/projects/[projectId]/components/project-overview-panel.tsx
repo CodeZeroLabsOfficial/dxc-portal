@@ -1,10 +1,8 @@
 "use client";
 
-import { formatProjectDate, projectStatusNamed } from "@/lib/projects";
+import { formatProjectDate } from "@/lib/projects";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask } from "@/types";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { ProjectActivityStream } from "./project-activity-stream";
 
 type ProjectOverviewPanelProps = {
@@ -65,70 +63,50 @@ export function ProjectOverviewPanel({
     }).format(value);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Project details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <DetailSection label="Status">
-            <DetailRow
-              label="Status"
-              value={
-                <Badge variant="secondary" className="capitalize">
-                  {projectStatusNamed[project.status] ?? project.status}
-                </Badge>
-              }
-            />
-            <DetailRow
-              label="Priority"
-              value={<span className="capitalize">{project.priority}</span>}
-            />
-            <div className="space-y-2">
-              <DetailRow label="Progress" value={`${project.progress}%`} />
-              <Progress value={project.progress} />
-            </div>
-          </DetailSection>
+    <div className="grid gap-4 xl:grid-cols-3">
+      <div className="space-y-4 xl:col-span-1">
+        <Card>
+          <CardHeader>
+            <CardTitle>Project details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <DetailSection label="Ownership">
+              <DetailRow label="Client" value={clientName} />
+              <DetailRow label="Project Manager" value={managerName} />
+              <DetailRow
+                label="Assigned resources"
+                value={
+                  project.resources.length ? project.resources.join(", ") : "—"
+                }
+              />
+            </DetailSection>
 
-          <DetailSection label="Ownership">
-            <DetailRow label="Client" value={clientName} />
-            <DetailRow label="Manager" value={managerName} />
-            <DetailRow
-              label="Resources"
-              value={
-                project.resources.length
-                  ? project.resources.join(", ")
-                  : "—"
-              }
-            />
-          </DetailSection>
+            <DetailSection label="Schedule">
+              <DetailRow label="Start" value={formatProjectDate(project.startDate)} />
+              <DetailRow label="End" value={formatProjectDate(project.endDate)} />
+            </DetailSection>
 
-          <DetailSection label="Schedule">
-            <DetailRow
-              label="Start"
-              value={formatProjectDate(project.startDate)}
-            />
-            <DetailRow label="End" value={formatProjectDate(project.endDate)} />
-          </DetailSection>
+            <DetailSection label="Work summary">
+              <DetailRow
+                label="Subtasks"
+                value={`${subtasks.length} (${done} done · ${inProgress} in progress · ${todo} todo)`}
+              />
+              <DetailRow label="Risks" value={`${openRisks} open`} />
+              <DetailRow label="Issues" value={`${openIssues} open`} />
+            </DetailSection>
 
-          <DetailSection label="Work summary">
-            <DetailRow
-              label="Subtasks"
-              value={`${subtasks.length} (${done} done · ${inProgress} in progress · ${todo} todo)`}
-            />
-            <DetailRow label="Risks" value={`${openRisks} open`} />
-            <DetailRow label="Issues" value={`${openIssues} open`} />
-          </DetailSection>
+            <DetailSection label="Budget">
+              <DetailRow label="Allocated" value={money(project.budget.allocated)} />
+              <DetailRow label="Spent" value={money(project.budget.spent)} />
+              <DetailRow label="Remaining" value={money(remaining)} />
+            </DetailSection>
+          </CardContent>
+        </Card>
+      </div>
 
-          <DetailSection label="Budget">
-            <DetailRow label="Allocated" value={money(project.budget.allocated)} />
-            <DetailRow label="Spent" value={money(project.budget.spent)} />
-            <DetailRow label="Remaining" value={money(remaining)} />
-          </DetailSection>
-        </CardContent>
-      </Card>
-
-      <ProjectActivityStream projectId={project.id} />
+      <div className="space-y-4 xl:col-span-2">
+        <ProjectActivityStream projectId={project.id} />
+      </div>
     </div>
   );
 }
