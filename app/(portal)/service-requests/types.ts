@@ -1,48 +1,46 @@
-import { EnumTodoPriority, EnumTodoStatus } from "./enum";
+import type { ServiceRequestStage } from "@/types";
+import { EnumRequestPriority } from "./enum";
 
-export type TodoPriority = `${EnumTodoPriority}`;
-export type TodoStatus = `${EnumTodoStatus}`;
-export type FilterTab = "all" | TodoStatus;
-export type ViewMode = "list" | "grid";
+export type RequestPriority = `${EnumRequestPriority}`;
+export type FilterTab = "all" | ServiceRequestStage;
 
-export interface Comment {
+export type RequestComment = {
   id: string;
   text: string;
   createdAt: Date;
-}
+};
 
-export interface TodoFile {
+export type RequestFile = {
   id: string;
   name: string;
   url: string;
   type: string;
   size: number;
   uploadedAt: Date;
-}
+  storagePath?: string;
+};
 
-export interface SubTask {
+export type RequestSubTask = {
   id: string;
   title: string;
   completed: boolean;
-}
+};
 
-export interface Todo {
+export type ServiceRequestItem = {
   id: string;
+  clientId: string;
   title: string;
   description?: string;
   assignedTo: string[];
-  comments: Comment[];
-  status: TodoStatus;
-  priority: TodoPriority;
+  comments: RequestComment[];
+  status: ServiceRequestStage;
+  priority: RequestPriority;
+  progress: number;
   createdAt: Date;
   dueDate?: Date | null;
-  reminderDate?: Date | null; // New field for reminders
-  files?: TodoFile[];
-  subTasks?: SubTask[];
+  reminderDate?: Date | null;
+  files?: RequestFile[];
+  subTasks?: RequestSubTask[];
   starred: boolean;
-}
-
-export interface TodoPosition {
-  id: string;
-  position: number;
-}
+  createdBy: string;
+};

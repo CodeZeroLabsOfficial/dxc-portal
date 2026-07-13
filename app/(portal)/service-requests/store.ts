@@ -1,267 +1,206 @@
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
-import {
-  Todo,
+import type { ServiceRequestStage } from "@/types";
+import { getStageProgress } from "@/lib/service-requests";
+import type {
   FilterTab,
-  ViewMode,
-  TodoFile,
-  TodoPriority
+  RequestFile,
+  RequestPriority,
+  ServiceRequestItem
 } from "./types";
 
-interface TodoStore {
-  todos: Todo[];
-  selectedTodoId: string | null;
-  activeTab: FilterTab;
-  isAddDialogOpen: boolean;
-  isTodoSheetOpen: boolean;
-  viewMode: ViewMode;
-  filterUser: string[] | null;
-  filterPriority: TodoPriority | null;
-  showStarredOnly: boolean; // New field for starred filter
-  searchQuery: string;
+export type ServiceRequestPersistence = {
+  create: (
+    item: Omit<
+      ServiceRequestItem,
+      "id" | "createdAt" | "comments" | "files" | "subTasks" | "starred" | "progress" | "clientId" | "createdBy"
+    > & { progress?: number }
+  ) => Promise<string>;
+  update: (id: string, patch: Partial<ServiceRequestItem>) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+  uploadFile: (requestId: string, file: File) => Promise<RequestFile>;
+};
 
-  // Actions
-  setTodos: (todos: Todo[]) => void;
-  addTodo: (
-    todo: Omit<
-      Todo,
-      "id" | "createdAt" | "comments" | "files" | "subTasks" | "starred" | "reminderDate"
+type ServiceRequestStore = {
+  items: ServiceRequestItem[];
+  selectedId: string | null;
+  activeTab: FilterTab;
+  isAddSheetOpen: boolean;
+  isDetailSheetOpen: boolean;
+  filterUser: string[] | null;
+  filterPriority: RequestPriority | null;
+  showStarredOnly: boolean;
+  searchQuery: string;
+  persistence: ServiceRequestPersistence | null;
+
+  setItems: (items: ServiceRequestItem[]) => void;
+  setPersistence: (persistence: ServiceRequestPersistence | null) => void;
+  addItem: (
+    item: Omit<
+      ServiceRequestItem,
+      | "id"
+      | "createdAt"
+      | "comments"
+      | "files"
+      | "subTasks"
+      | "starred"
+      | "progress"
+      | "clientId"
+      | "createdBy"
     >
-  ) => void;
-  updateTodo: (id: string, updatedTodo: Partial<Omit<Todo, "id">>) => void;
-  deleteTodo: (id: string) => void;
-  setSelectedTodoId: (id: string | null) => void;
+  ) => Promise<void>;
+  updateItem: (id: string, patch: Partial<Omit<ServiceRequestItem, "id">>) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
+  setSelectedId: (id: string | null) => void;
   setActiveTab: (tab: FilterTab) => void;
-  setAddDialogOpen: (isOpen: boolean) => void;
-  setTodoSheetOpen: (isOpen: boolean) => void;
-  addComment: (todoId: string, text: string) => void;
-  deleteComment: (todoId: string, commentId: string) => void;
-  reorderTodos: (todoPositions: { id: string; position: number }[]) => void;
-  setViewMode: (mode: ViewMode) => void;
+  setAddSheetOpen: (open: boolean) => void;
+  setDetailSheetOpen: (open: boolean) => void;
+  addComment: (id: string, text: string) => Promise<void>;
+  deleteComment: (id: string, commentId: string) => Promise<void>;
+  reorderItems: (positions: { id: string; position: number }[]) => void;
   setFilterUser: (users: string[] | null) => void;
-  setFilterPriority: (priority: TodoPriority | null) => void;
+  setFilterPriority: (priority: RequestPriority | null) => void;
   setSearchQuery: (query: string) => void;
-  toggleShowStarredOnly: () => void; // New action for toggling starred filter
-  addFile: (todoId: string, file: Omit<TodoFile, "id">) => void;
-  removeFile: (todoId: string, fileId: string) => void;
-  addSubTask: (todoId: string, title: string) => void;
-  updateSubTask: (todoId: string, subTaskId: string, completed: boolean) => void;
-  removeSubTask: (todoId: string, subTaskId: string) => void;
-  toggleStarred: (todoId: string) => void;
+  toggleShowStarredOnly: () => void;
+  addFile: (id: string, file: File) => Promise<void>;
+  removeFile: (id: string, fileId: string) => Promise<void>;
+  addSubTask: (id: string, title: string) => Promise<void>;
+  updateSubTask: (id: string, subTaskId: string, completed: boolean) => Promise<void>;
+  removeSubTask: (id: string, subTaskId: string) => Promise<void>;
+  toggleStarred: (id: string) => Promise<void>;
+};
+
+function withProgress<T extends { status?: ServiceRequestStage; progress?: number }>(patch: T): T {
+  if (patch.status) {
+    return { ...patch, progress: getStageProgress(patch.status) };
+  }
+  return patch;
 }
 
-export const useTodoStore = create<TodoStore>((set) => ({
-  todos: [],
-  selectedTodoId: null,
+export const useServiceRequestStore = create<ServiceRequestStore>((set, get) => ({
+  items: [],
+  selectedId: null,
   activeTab: "all",
-  isAddDialogOpen: false,
-  isTodoSheetOpen: false,
-  viewMode: "list",
+  isAddSheetOpen: false,
+  isDetailSheetOpen: false,
   filterUser: null,
   filterPriority: null,
-  showStarredOnly: false, // Initialize starred filter state
+  showStarredOnly: false,
   searchQuery: "",
+  persistence: null,
 
-  setTodos: (todos) =>
-    set(() => ({
-      todos: todos
-    })),
-  addTodo: (todo) =>
+  setItems: (items) => set({ items }),
+  setPersistence: (persistence) => set({ persistence }),
+
+  addItem: async (item) => {
+    const persistence = get().persistence;
+    if (!persistence) return;
+    await persistence.create(item);
+  },
+
+  updateItem: async (id, patch) => {
+    const persistence = get().persistence;
+    const next = withProgress(patch);
+    // Optimistic local update for snappy UI
     set((state) => ({
-      todos: [
-        ...state.todos,
-        {
-          ...todo,
-          id: uuidv4(),
-          createdAt: new Date(),
-          comments: [],
-          files: [],
-          subTasks: [],
-          starred: false
-        }
-      ]
-    })),
+      items: state.items.map((item) => (item.id === id ? { ...item, ...next } : item))
+    }));
+    if (persistence) await persistence.update(id, next);
+  },
 
-  updateTodo: (id, updatedTodo) =>
-    set((state) => ({
-      todos: state.todos.map((todo) => (todo.id === id ? { ...todo, ...updatedTodo } : todo))
-    })),
+  deleteItem: async (id) => {
+    const persistence = get().persistence;
+    set((state) => ({ items: state.items.filter((item) => item.id !== id) }));
+    if (persistence) await persistence.remove(id);
+  },
 
-  deleteTodo: (id) =>
-    set((state) => ({
-      todos: state.todos.filter((todo) => todo.id !== id)
-    })),
+  setSelectedId: (id) => set({ selectedId: id }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
+  setAddSheetOpen: (open) => set({ isAddSheetOpen: open }),
+  setDetailSheetOpen: (open) => set({ isDetailSheetOpen: open }),
 
-  setSelectedTodoId: (id) =>
-    set(() => ({
-      selectedTodoId: id
-    })),
+  addComment: async (id, text) => {
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
+    const comments = [
+      ...item.comments,
+      { id: uuidv4(), text, createdAt: new Date() }
+    ];
+    await get().updateItem(id, { comments });
+  },
 
-  setActiveTab: (tab) =>
-    set(() => ({
-      activeTab: tab
-    })),
+  deleteComment: async (id, commentId) => {
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
+    await get().updateItem(id, {
+      comments: item.comments.filter((comment) => comment.id !== commentId)
+    });
+  },
 
-  setAddDialogOpen: (isOpen) =>
-    set(() => ({
-      isAddDialogOpen: isOpen
-    })),
-
-  setTodoSheetOpen: (isOpen) =>
-    set(() => ({
-      isTodoSheetOpen: isOpen
-    })),
-
-  addComment: (todoId, text) =>
-    set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === todoId
-          ? {
-              ...todo,
-              comments: [
-                ...todo.comments,
-                {
-                  id: uuidv4(),
-                  text,
-                  createdAt: new Date()
-                }
-              ]
-            }
-          : todo
-      )
-    })),
-
-  deleteComment: (todoId, commentId) =>
-    set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === todoId
-          ? {
-              ...todo,
-              comments: todo.comments.filter((comment) => comment.id !== commentId)
-            }
-          : todo
-      )
-    })),
-
-  reorderTodos: (todoPositions) =>
+  reorderItems: (positions) =>
     set((state) => {
-      const reorderedTodos = [...state.todos];
-
-      todoPositions.forEach(({ id, position }) => {
-        const todoIndex = reorderedTodos.findIndex((todo) => todo.id === id);
-        if (todoIndex !== -1) {
-          const [todo] = reorderedTodos.splice(todoIndex, 1);
-          reorderedTodos.splice(position, 0, todo);
+      const next = [...state.items];
+      positions.forEach(({ id, position }) => {
+        const index = next.findIndex((item) => item.id === id);
+        if (index !== -1) {
+          const [item] = next.splice(index, 1);
+          next.splice(position, 0, item);
         }
       });
-
-      return { todos: reorderedTodos };
+      return { items: next };
     }),
 
-  setViewMode: (mode) =>
-    set(() => ({
-      viewMode: mode
-    })),
+  setFilterUser: (users) => set({ filterUser: users }),
+  setFilterPriority: (priority) => set({ filterPriority: priority }),
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  toggleShowStarredOnly: () => set((state) => ({ showStarredOnly: !state.showStarredOnly })),
 
-  setFilterUser: (users) =>
-    set(() => ({
-      filterUser: users
-    })),
+  addFile: async (id, file) => {
+    const persistence = get().persistence;
+    if (!persistence) return;
+    const uploaded = await persistence.uploadFile(id, file);
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
+    await get().updateItem(id, { files: [...(item.files || []), uploaded] });
+  },
 
-  setFilterPriority: (priority) =>
-    set(() => ({
-      filterPriority: priority
-    })),
+  removeFile: async (id, fileId) => {
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
+    await get().updateItem(id, {
+      files: (item.files || []).filter((file) => file.id !== fileId)
+    });
+  },
 
-  setSearchQuery: (query) =>
-    set(() => ({
-      searchQuery: query
-    })),
+  addSubTask: async (id, title) => {
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
+    await get().updateItem(id, {
+      subTasks: [...(item.subTasks || []), { id: uuidv4(), title, completed: false }]
+    });
+  },
 
-  toggleShowStarredOnly: () =>
-    set((state) => ({
-      showStarredOnly: !state.showStarredOnly
-    })),
-
-  addFile: (todoId, file) =>
-    set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === todoId
-          ? {
-              ...todo,
-              files: [
-                ...(todo.files || []),
-                {
-                  ...file,
-                  id: uuidv4()
-                }
-              ]
-            }
-          : todo
+  updateSubTask: async (id, subTaskId, completed) => {
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
+    await get().updateItem(id, {
+      subTasks: (item.subTasks || []).map((subTask) =>
+        subTask.id === subTaskId ? { ...subTask, completed } : subTask
       )
-    })),
+    });
+  },
 
-  removeFile: (todoId, fileId) =>
-    set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === todoId
-          ? {
-              ...todo,
-              files: (todo.files || []).filter((file) => file.id !== fileId)
-            }
-          : todo
-      )
-    })),
+  removeSubTask: async (id, subTaskId) => {
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
+    await get().updateItem(id, {
+      subTasks: (item.subTasks || []).filter((subTask) => subTask.id !== subTaskId)
+    });
+  },
 
-  addSubTask: (todoId, title) =>
-    set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === todoId
-          ? {
-              ...todo,
-              subTasks: [
-                ...(todo.subTasks || []),
-                {
-                  id: uuidv4(),
-                  title,
-                  completed: false
-                }
-              ]
-            }
-          : todo
-      )
-    })),
-
-  updateSubTask: (todoId, subTaskId, completed) =>
-    set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === todoId
-          ? {
-              ...todo,
-              subTasks: (todo.subTasks || []).map((subTask) =>
-                subTask.id === subTaskId ? { ...subTask, completed } : subTask
-              )
-            }
-          : todo
-      )
-    })),
-
-  removeSubTask: (todoId, subTaskId) =>
-    set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === todoId
-          ? {
-              ...todo,
-              subTasks: (todo.subTasks || []).filter((subTask) => subTask.id !== subTaskId)
-            }
-          : todo
-      )
-    })),
-
-  toggleStarred: (todoId) =>
-    set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === todoId ? { ...todo, starred: !todo.starred } : todo
-      )
-    }))
+  toggleStarred: async (id) => {
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
+    await get().updateItem(id, { starred: !item.starred });
+  }
 }));

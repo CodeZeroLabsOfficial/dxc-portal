@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -12,9 +14,10 @@ import {
   PlusCircleIcon,
   ClockIcon
 } from "lucide-react";
-import { useTodoStore } from "../store";
-import { statusClasses, priorityClasses } from "../enum";
 import { toast } from "sonner";
+
+import { useServiceRequestStore } from "../store";
+import { statusClasses, priorityClasses, stageNamed } from "../enum";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -24,21 +27,21 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
-interface TodoDetailSheetProps {
+type RequestDetailSheetProps = {
   isOpen: boolean;
   onClose: () => void;
-  todoId: string | null;
+  requestId: string | null;
   onEditClick?: (id: string) => void;
-}
+};
 
-const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
+export default function RequestDetailSheet({
   isOpen,
   onClose,
-  todoId,
+  requestId,
   onEditClick
-}) => {
+}: RequestDetailSheetProps) {
   const {
-    todos,
+    items,
     addComment,
     deleteComment,
     addFile,
@@ -46,93 +49,77 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
     addSubTask,
     updateSubTask,
     removeSubTask
-  } = useTodoStore();
+  } = useServiceRequestStore();
 
   const [newComment, setNewComment] = React.useState("");
   const [newSubTask, setNewSubTask] = React.useState("");
   const [isAddingSubTask, setIsAddingSubTask] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
 
-  const todo = todos.find((t) => t.id === todoId);
+  const item = items.find((entry) => entry.id === requestId);
+  if (!item) return null;
 
-  if (!todo) return null;
-
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newComment.trim()) {
-      toast.error("Both comment and author name are required");
+      toast.error("Comment is required");
       return;
     }
-
-    addComment(todo.id, newComment);
+    await addComment(item.id, newComment.trim());
     setNewComment("");
-    toast.success("Your comment has been added successfully.");
+    toast.success("Comment added");
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        addFile(todo.id, {
-          name: file.name,
-          url: reader.result as string,
-          type: file.type,
-          size: file.size,
-          uploadedAt: new Date()
-        });
-
-        toast.success(`${file.name} has been added to the task`);
-      };
-    });
-
-    e.target.value = "";
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        await addFile(item.id, file);
+        toast.success(`${file.name} uploaded`);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Unable to upload file");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
-  const handleAddSubTask = () => {
+  const handleAddSubTask = async () => {
     if (!newSubTask.trim()) {
       toast.error("Subtask title is required");
       return;
     }
-
-    addSubTask(todo.id, newSubTask);
+    await addSubTask(item.id, newSubTask.trim());
     setNewSubTask("");
     setIsAddingSubTask(false);
-    toast.success("Your subtask has been added successfully.");
-  };
-
-  const handleSubTaskToggle = (subTaskId: string, completed: boolean) => {
-    updateSubTask(todo.id, subTaskId, completed);
-  };
-
-  const handleRemoveSubTask = (subTaskId: string) => {
-    removeSubTask(todo.id, subTaskId);
-    toast.success("The subtask has been removed successfully.");
+    toast.success("Subtask added");
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " bytes";
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / 1048576).toFixed(1) + " MB";
+    if (bytes < 1024) return `${bytes} bytes`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1048576).toFixed(1)} MB`;
   };
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent>
+      <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <div className="flex items-start justify-between pe-6">
-            <SheetTitle>{todo.title}</SheetTitle>
-            {onEditClick && (
-              <Button variant="outline" onClick={() => onEditClick(todo.id)}>
+            <SheetTitle>{item.title}</SheetTitle>
+            {onEditClick ? (
+              <Button variant="outline" onClick={() => onEditClick(item.id)}>
                 <Edit />
                 Edit
               </Button>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-2 capitalize">
-            <Badge className={statusClasses[todo.status]}>{todo.status.replace("-", " ")}</Badge>
-            <Badge className={priorityClasses[todo.priority]}>{todo.priority}</Badge>
+            <Badge className={statusClasses[item.status]}>{stageNamed[item.status]}</Badge>
+            <Badge className={priorityClasses[item.priority]}>{item.priority}</Badge>
           </div>
         </SheetHeader>
 
@@ -140,27 +127,29 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Description</h4>
             <p className="text-muted-foreground text-sm">
-              {todo.description || "No description provided."}
+              {item.description || "No description provided."}
             </p>
           </div>
 
-          <div className="grid grid-cols-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">Assigned To</h4>
-              <p className="text-muted-foreground text-sm">{todo.assignedTo || "Unassigned"}</p>
+              <h4 className="text-sm font-medium">Assigned to</h4>
+              <p className="text-muted-foreground text-sm">
+                {item.assignedTo.length ? item.assignedTo.join(", ") : "Unassigned"}
+              </p>
             </div>
-            {todo.dueDate && (
+            {item.dueDate ? (
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Due Date</h4>
+                <h4 className="text-sm font-medium">Due date</h4>
                 <p className="text-muted-foreground text-sm">
-                  {format(new Date(todo.dueDate), "PPP")}
+                  {format(new Date(item.dueDate), "PPP")}
                 </p>
               </div>
-            )}
+            ) : null}
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Created</h4>
               <p className="text-muted-foreground text-sm">
-                {format(new Date(todo.createdAt), "PPP")}
+                {format(new Date(item.createdAt), "PPP")}
               </p>
             </div>
           </div>
@@ -170,9 +159,9 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 
         <div className="space-y-4 p-4">
           <h4 className="text-sm font-medium">Subtasks</h4>
-          {todo.subTasks && todo.subTasks.length > 0 ? (
+          {item.subTasks && item.subTasks.length > 0 ? (
             <div className="space-y-2">
-              {todo.subTasks.map((subTask) => (
+              {item.subTasks.map((subTask) => (
                 <div
                   key={subTask.id}
                   className="bg-muted flex items-center justify-between rounded-md p-2">
@@ -180,7 +169,7 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
                     <Checkbox
                       checked={subTask.completed}
                       onCheckedChange={(checked) =>
-                        handleSubTaskToggle(subTask.id, Boolean(checked))
+                        void updateSubTask(item.id, subTask.id, Boolean(checked))
                       }
                     />
                     <span
@@ -195,7 +184,11 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
                     variant="ghost"
                     className="text-red-400!"
                     size="sm"
-                    onClick={() => handleRemoveSubTask(subTask.id)}>
+                    onClick={() =>
+                      void removeSubTask(item.id, subTask.id).then(() =>
+                        toast.success("Subtask removed")
+                      )
+                    }>
                     <Trash2 />
                   </Button>
                 </div>
@@ -207,16 +200,12 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
             </div>
           )}
 
-          {!isAddingSubTask && (
-            <div>
-              <Button variant="outline" size="sm" onClick={() => setIsAddingSubTask(true)}>
-                <PlusCircleIcon />
-                <span>Add Sub Task</span>
-              </Button>
-            </div>
-          )}
-
-          {isAddingSubTask && (
+          {!isAddingSubTask ? (
+            <Button variant="outline" size="sm" onClick={() => setIsAddingSubTask(true)}>
+              <PlusCircleIcon />
+              <span>Add subtask</span>
+            </Button>
+          ) : (
             <div className="flex gap-2">
               <Input
                 value={newSubTask}
@@ -224,15 +213,14 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
                 placeholder="Enter subtask title"
                 className="flex-1"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleAddSubTask();
-                  } else if (e.key === "Escape") {
+                  if (e.key === "Enter") void handleAddSubTask();
+                  if (e.key === "Escape") {
                     setIsAddingSubTask(false);
                     setNewSubTask("");
                   }
                 }}
               />
-              <Button onClick={handleAddSubTask}>
+              <Button onClick={() => void handleAddSubTask()}>
                 <Check />
               </Button>
               <Button
@@ -255,25 +243,26 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
             <div>
               <input
                 type="file"
-                id="file-upload"
+                id="service-request-file-upload"
                 multiple
                 className="sr-only"
-                onChange={handleFileUpload}
+                onChange={(e) => void handleFileUpload(e)}
+                disabled={uploading}
               />
-              <label htmlFor="file-upload">
-                <Button variant="outline" size="sm" asChild>
+              <label htmlFor="service-request-file-upload">
+                <Button variant="outline" size="sm" asChild disabled={uploading}>
                   <span>
                     <FilePlus />
-                    Upload
+                    {uploading ? "Uploading..." : "Upload"}
                   </span>
                 </Button>
               </label>
             </div>
           </div>
 
-          {todo.files && todo.files.length > 0 ? (
+          {item.files && item.files.length > 0 ? (
             <div className="space-y-2">
-              {todo.files.map((file) => (
+              {item.files.map((file) => (
                 <div
                   key={file.id}
                   className="bg-muted flex items-center justify-between rounded-md p-2">
@@ -296,7 +285,7 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeFile(todo.id, file.id)}
+                    onClick={() => void removeFile(item.id, file.id)}
                     className="text-red-400!">
                     <Trash2 />
                   </Button>
@@ -313,16 +302,16 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
         <Separator />
 
         <div className="space-y-4 p-4">
-          <h4 className="text-sm font-medium">Comments ({todo.comments.length})</h4>
+          <h4 className="text-sm font-medium">Comments ({item.comments.length})</h4>
 
-          {todo.comments.length === 0 && (
+          {item.comments.length === 0 ? (
             <div className="bg-muted text-muted-foreground rounded-md p-4 text-center text-sm">
               No comments yet.
             </div>
-          )}
+          ) : null}
 
           <div className="space-y-2">
-            {todo.comments.map((comment) => (
+            {item.comments.map((comment) => (
               <div key={comment.id} className="bg-muted group relative space-y-3 rounded-md p-3">
                 <p className="text-sm">{comment.text}</p>
                 <div className="text-muted-foreground flex justify-between text-xs">
@@ -332,7 +321,7 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
                   <div className="absolute end-2 bottom-2 flex items-center opacity-0 group-hover:opacity-100">
                     <Button
                       variant="ghost"
-                      onClick={() => deleteComment(todo.id, comment.id)}
+                      onClick={() => void deleteComment(item.id, comment.id)}
                       className="text-red-400!"
                       size="sm">
                       <Trash2 className="size-3" />
@@ -349,12 +338,10 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
             />
-            <Button onClick={handleAddComment}>Add Comment</Button>
+            <Button onClick={() => void handleAddComment()}>Add comment</Button>
           </div>
         </div>
       </SheetContent>
     </Sheet>
   );
-};
-
-export default TodoDetailSheet;
+}

@@ -1,14 +1,16 @@
 import * as z from "zod";
-import { EnumTodoPriority, EnumTodoStatus } from "./enum";
+import { EnumRequestPriority, EnumRequestStage } from "./enum";
 
-export const todoFormSchema = z.object({
+export const requestFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   assignedTo: z.array(z.string()).min(1, "At least one assignee is required"),
-  status: z.enum(Object.values(EnumTodoStatus) as [EnumTodoStatus, ...EnumTodoStatus[]]),
-  priority: z.enum(Object.values(EnumTodoPriority) as [EnumTodoPriority, ...EnumTodoPriority[]]),
+  status: z.enum(Object.values(EnumRequestStage) as [EnumRequestStage, ...EnumRequestStage[]]),
+  priority: z.enum(
+    Object.values(EnumRequestPriority) as [EnumRequestPriority, ...EnumRequestPriority[]]
+  ),
   dueDate: z.date().optional().nullable(),
   reminderDate: z.date().optional().nullable()
 });
 
-export type TodoFormValues = z.infer<typeof todoFormSchema>;
+export type RequestFormValues = z.infer<typeof requestFormSchema>;

@@ -1,54 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  Timestamp,
   updateDoc,
-  where,
-  Timestamp
+  where
 } from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
-import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
-import { Plus } from "lucide-react";
 
 import { db } from "@/lib/firebase";
+import { uploadFile } from "@/lib/storage";
+import { getStageProgress } from "@/lib/service-requests";
 import { useAuth } from "@/hooks/use-auth";
 import { useActiveClient } from "@/hooks/use-active-client";
-import { getStageProgress, SERVICE_REQUEST_STAGES, stageLabel } from "@/lib/service-requests";
-import { uploadFile } from "@/lib/storage";
-import type { ServiceRequest, ServiceRequestStage, UserProfile } from "@/types";
+import type { ServiceRequestStage } from "@/types";
 import { PageContent } from "@/components/shared/page-content";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { DataTable } from "@/components/shared/data-table/data-table";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle
-} from "@/components/ui/sheet";
-import { getDocs } from "firebase/firestore";
+
+import RequestsBoard from "./components/requests-board";
+import { useServiceRequestStore } from "./store";
+import type { RequestFile, RequestPriority, ServiceRequestItem } from "./types";
 
 function toDate(value: unknown): Date | null {
   if (!value) return null;
@@ -57,45 +37,159 @@ function toDate(value: unknown): Date | null {
   return null;
 }
 
+function mapDoc(id: string, data: Record<string, unknown>): ServiceRequestItem {
+  const stage = (data.stage as ServiceRequestStage) || "created";
+  return {
+    id,
+    clientId: String(data.clientId ?? ""),
+    title: String(data.title ?? ""),
+    description: (data.description as string | undefined) ?? undefined,
+    assignedTo: Array.isArray(data.assignedTo) ? (data.assignedTo as string[]) : [],
+    comments: Array.isArray(data.comments)
+      ? (data.comments as Array<Record<string, unknown>>).map((comment) => ({
+          id: String(comment.id ?? uuidv4()),
+          text: String(comment.text ?? ""),
+          createdAt: toDate(comment.createdAt) ?? new Date()
+        }))
+      : [],
+    status: stage,
+    priority: ((data.priority as RequestPriority) || "medium") as RequestPriority,
+    progress: Number(data.progress ?? getStageProgress(stage)),
+    createdAt: toDate(data.createdAt) ?? new Date(),
+    dueDate: toDate(data.dueDate),
+    reminderDate: toDate(data.reminderDate),
+    files: Array.isArray(data.files)
+      ? (data.files as Array<Record<string, unknown>>).map((file) => ({
+          id: String(file.id ?? uuidv4()),
+          name: String(file.name ?? "file"),
+          url: String(file.url ?? ""),
+          type: String(file.type ?? ""),
+          size: Number(file.size ?? 0),
+          uploadedAt: toDate(file.uploadedAt) ?? new Date(),
+          storagePath: file.storagePath ? String(file.storagePath) : undefined
+        }))
+      : [],
+    subTasks: Array.isArray(data.subTasks)
+      ? (data.subTasks as Array<Record<string, unknown>>).map((subTask) => ({
+          id: String(subTask.id ?? uuidv4()),
+          title: String(subTask.title ?? ""),
+          completed: Boolean(subTask.completed)
+        }))
+      : [],
+    starred: Boolean(data.starred),
+    createdBy: String(data.createdBy ?? "")
+  };
+}
+
 export default function ServiceRequestsPage() {
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { activeClient } = useActiveClient();
-  const [requests, setRequests] = useState<ServiceRequest[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [selected, setSelected] = useState<ServiceRequest | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [assigneeId, setAssigneeId] = useState<string>("");
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const { setItems, setPersistence } = useServiceRequestStore();
+
+  const persistence = useMemo(() => {
+    if (!user || !activeClient) return null;
+
+    return {
+      create: async (item: {
+        title: string;
+        description?: string;
+        assignedTo: string[];
+        status: ServiceRequestStage;
+        priority: RequestPriority;
+        dueDate?: Date | null;
+        reminderDate?: Date | null;
+      }) => {
+        const ref = await addDoc(collection(db, "serviceRequests"), {
+          clientId: activeClient.id,
+          title: item.title,
+          description: item.description ?? null,
+          assignedTo: item.assignedTo,
+          stage: item.status,
+          progress: getStageProgress(item.status),
+          priority: item.priority,
+          dueDate: item.dueDate ? Timestamp.fromDate(item.dueDate) : null,
+          reminderDate: item.reminderDate ? Timestamp.fromDate(item.reminderDate) : null,
+          comments: [],
+          files: [],
+          subTasks: [],
+          starred: false,
+          createdBy: user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        return ref.id;
+      },
+      update: async (id: string, patch: Partial<ServiceRequestItem>) => {
+        const payload: Record<string, unknown> = {
+          updatedAt: serverTimestamp()
+        };
+
+        if (patch.title !== undefined) payload.title = patch.title;
+        if (patch.description !== undefined) payload.description = patch.description ?? null;
+        if (patch.assignedTo !== undefined) payload.assignedTo = patch.assignedTo;
+        if (patch.status !== undefined) {
+          payload.stage = patch.status;
+          payload.progress = patch.progress ?? getStageProgress(patch.status);
+        }
+        if (patch.progress !== undefined) payload.progress = patch.progress;
+        if (patch.priority !== undefined) payload.priority = patch.priority;
+        if (patch.dueDate !== undefined) {
+          payload.dueDate = patch.dueDate ? Timestamp.fromDate(patch.dueDate) : null;
+        }
+        if (patch.reminderDate !== undefined) {
+          payload.reminderDate = patch.reminderDate
+            ? Timestamp.fromDate(patch.reminderDate)
+            : null;
+        }
+        if (patch.comments !== undefined) {
+          payload.comments = patch.comments.map((comment) => ({
+            ...comment,
+            createdAt: Timestamp.fromDate(comment.createdAt)
+          }));
+        }
+        if (patch.files !== undefined) {
+          payload.files = patch.files.map((file) => ({
+            ...file,
+            uploadedAt: Timestamp.fromDate(file.uploadedAt)
+          }));
+        }
+        if (patch.subTasks !== undefined) payload.subTasks = patch.subTasks;
+        if (patch.starred !== undefined) payload.starred = patch.starred;
+
+        await updateDoc(doc(db, "serviceRequests", id), payload);
+      },
+      remove: async (id: string) => {
+        await deleteDoc(doc(db, "serviceRequests", id));
+      },
+      uploadFile: async (requestId: string, file: File): Promise<RequestFile> => {
+        const uploaded = await uploadFile(
+          `service-requests/${requestId}/${Date.now()}-${file.name}`,
+          file
+        );
+        return {
+          id: uuidv4(),
+          name: file.name,
+          url: uploaded.url,
+          type: file.type,
+          size: file.size,
+          uploadedAt: new Date(),
+          storagePath: uploaded.storagePath
+        };
+      }
+    };
+  }, [user, activeClient]);
 
   useEffect(() => {
-    void getDocs(collection(db, "users")).then((snap) => {
-      setUsers(
-        snap.docs.map((item) => {
-          const data = item.data();
-          return {
-            uid: item.id,
-            displayName: data.displayName ?? "User",
-            email: data.email ?? "",
-            role: data.role ?? "staff"
-          };
-        })
-      );
-    });
-  }, []);
+    setPersistence(persistence);
+    return () => setPersistence(null);
+  }, [persistence, setPersistence]);
 
   useEffect(() => {
     if (!activeClient) {
-      setRequests([]);
-      setLoading(false);
+      setItems([]);
       return;
     }
 
-    setLoading(true);
     const q = query(
       collection(db, "serviceRequests"),
       where("clientId", "==", activeClient.id),
@@ -105,152 +199,16 @@ export default function ServiceRequestsPage() {
     const unsubscribe = onSnapshot(
       q,
       (snap) => {
-        setRequests(
-          snap.docs.map((item) => {
-            const data = item.data();
-            return {
-              id: item.id,
-              clientId: data.clientId,
-              title: data.title,
-              description: data.description ?? null,
-              createdAt: toDate(data.createdAt),
-              dueDate: toDate(data.dueDate),
-              assigneeId: data.assigneeId ?? null,
-              stage: data.stage as ServiceRequestStage,
-              progress: data.progress ?? 0,
-              createdBy: data.createdBy,
-              updatedAt: toDate(data.updatedAt)
-            };
-          })
-        );
-        setLoading(false);
+        setItems(snap.docs.map((item) => mapDoc(item.id, item.data())));
       },
       (error) => {
         console.error(error);
         toast.error("Unable to load service requests. Check Firestore indexes.");
-        setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [activeClient]);
-
-  async function createRequest() {
-    if (!user || !activeClient || !title.trim()) return;
-    setSaving(true);
-    try {
-      const stage: ServiceRequestStage = "created";
-      await addDoc(collection(db, "serviceRequests"), {
-        clientId: activeClient.id,
-        title: title.trim(),
-        description: description.trim() || null,
-        createdAt: serverTimestamp(),
-        dueDate: dueDate ? Timestamp.fromDate(new Date(dueDate)) : null,
-        assigneeId: assigneeId || null,
-        stage,
-        progress: getStageProgress(stage),
-        createdBy: user.uid,
-        updatedAt: serverTimestamp()
-      });
-      toast.success("Service request created");
-      setCreateOpen(false);
-      setTitle("");
-      setDescription("");
-      setDueDate("");
-      setAssigneeId("");
-    } catch (error) {
-      console.error(error);
-      toast.error("Unable to create request");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function updateStage(requestId: string, stage: ServiceRequestStage) {
-    try {
-      await updateDoc(doc(db, "serviceRequests", requestId), {
-        stage,
-        progress: getStageProgress(stage),
-        updatedAt: serverTimestamp()
-      });
-      if (selected?.id === requestId) {
-        setSelected((prev) =>
-          prev ? { ...prev, stage, progress: getStageProgress(stage) } : prev
-        );
-      }
-      toast.success("Stage updated");
-    } catch (error) {
-      console.error(error);
-      toast.error("Unable to update stage");
-    }
-  }
-
-  async function onUpload(file: File) {
-    if (!selected || !user) return;
-    setUploading(true);
-    try {
-      const fileId = crypto.randomUUID();
-      const path = `service-requests/${selected.id}/${fileId}-${file.name}`;
-      const uploaded = await uploadFile(path, file);
-      await addDoc(collection(db, "serviceRequests", selected.id, "attachments"), {
-        name: file.name,
-        storagePath: uploaded.storagePath,
-        url: uploaded.url,
-        contentType: file.type || "application/octet-stream",
-        size: file.size,
-        uploadedBy: user.uid,
-        uploadedAt: serverTimestamp()
-      });
-      toast.success("File attached");
-    } catch (error) {
-      console.error(error);
-      toast.error("Unable to upload file");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  const columns = useMemo<ColumnDef<ServiceRequest>[]>(
-    () => [
-      { accessorKey: "title", header: "Title" },
-      {
-        accessorKey: "stage",
-        header: "Stage",
-        cell: ({ row }) => <StatusBadge kind="stage" value={row.original.stage} />
-      },
-      {
-        accessorKey: "progress",
-        header: "Progress",
-        cell: ({ row }) => (
-          <div className="w-28 space-y-1">
-            <Progress value={row.original.progress} />
-            <p className="text-muted-foreground text-xs">{row.original.progress}%</p>
-          </div>
-        )
-      },
-      {
-        accessorKey: "assigneeId",
-        header: "Assignee",
-        cell: ({ row }) =>
-          users.find((u) => u.uid === row.original.assigneeId)?.displayName ?? "Unassigned"
-      },
-      {
-        accessorKey: "dueDate",
-        header: "Due",
-        cell: ({ row }) =>
-          row.original.dueDate ? format(row.original.dueDate, "dd MMM yyyy") : "—"
-      },
-      {
-        id: "actions",
-        cell: ({ row }) => (
-          <Button variant="outline" size="sm" onClick={() => setSelected(row.original)}>
-            Open
-          </Button>
-        )
-      }
-    ],
-    [users]
-  );
+  }, [activeClient, setItems]);
 
   if (!activeClient) {
     return (
@@ -262,125 +220,7 @@ export default function ServiceRequestsPage() {
 
   return (
     <PageContent>
-      <PageHeader
-        title="Service requests"
-        description={`Client: ${activeClient.name}`}
-        actions={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus />
-            New request
-          </Button>
-        }
-      />
-
-      <Card>
-        <CardContent className="pt-6">
-          {loading ? (
-            <p className="text-muted-foreground text-sm">Loading...</p>
-          ) : (
-            <DataTable columns={columns} data={requests} />
-          )}
-        </CardContent>
-      </Card>
-
-      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>New service request</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4 px-4">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Due date</Label>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Assignee</Label>
-              <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((item) => (
-                    <SelectItem key={item.uid} value={item.uid}>
-                      {item.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <SheetFooter>
-            <Button onClick={() => void createRequest()} disabled={saving || !title.trim()}>
-              {saving ? "Creating..." : "Create"}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent className="sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>{selected?.title}</SheetTitle>
-          </SheetHeader>
-          {selected ? (
-            <div className="space-y-6 px-4">
-              <div className="space-y-2">
-                <Label>Stage</Label>
-                <div className="flex flex-wrap gap-2">
-                  {SERVICE_REQUEST_STAGES.map((stage) => (
-                    <Button
-                      key={stage}
-                      size="sm"
-                      variant={selected.stage === stage ? "default" : "outline"}
-                      onClick={() => void updateStage(selected.id, stage)}>
-                      {stageLabel(stage)}
-                    </Button>
-                  ))}
-                </div>
-                <Progress value={selected.progress} className="mt-2" />
-                <p className="text-muted-foreground text-xs">{selected.progress}%</p>
-              </div>
-              <div className="space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Created: </span>
-                  {selected.createdAt ? format(selected.createdAt, "dd MMM yyyy") : "—"}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Due: </span>
-                  {selected.dueDate ? format(selected.dueDate, "dd MMM yyyy") : "—"}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Assignee: </span>
-                  {users.find((u) => u.uid === selected.assigneeId)?.displayName ?? "Unassigned"}
-                </p>
-                <p className="pt-2">{selected.description || "No description"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Attach document</Label>
-                <Input
-                  type="file"
-                  disabled={uploading}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void onUpload(file);
-                  }}
-                />
-              </div>
-              <p className="text-muted-foreground text-xs">
-                Created by {userProfile?.displayName ?? "staff"}
-              </p>
-            </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <RequestsBoard />
     </PageContent>
   );
 }

@@ -1,19 +1,22 @@
+"use client";
+
 import React from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useTodoStore } from "../store";
-import { todoFormSchema, TodoFormValues } from "../schemas";
+import { toast } from "sonner";
+
+import { useServiceRequestStore } from "../store";
+import { requestFormSchema, type RequestFormValues } from "../schemas";
 import {
   priorityDotColors,
   statusDotColors,
-  EnumTodoStatus,
-  todoStatusNamed,
-  EnumTodoPriority
+  EnumRequestStage,
+  stageNamed,
+  EnumRequestPriority
 } from "../enum";
-import { toast } from "sonner";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -38,93 +41,93 @@ import {
   FormMessage
 } from "@/components/ui/form";
 
-interface AddTodoSheetProps {
+type AddRequestSheetProps = {
   isOpen: boolean;
   onClose: () => void;
-  editTodoId?: string | null;
-}
+  editId?: string | null;
+};
 
-const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId }) => {
-  const { addTodo, updateTodo, todos } = useTodoStore();
-
+export default function AddRequestSheet({ isOpen, onClose, editId }: AddRequestSheetProps) {
+  const { addItem, updateItem, items } = useServiceRequestStore();
   const [assignedUsers, setAssignedUsers] = React.useState<string[]>([]);
   const [newUser, setNewUser] = React.useState("");
 
-  const defaultValues = {
+  const defaultValues: RequestFormValues = {
     title: "",
     description: "",
     assignedTo: [],
-    status: EnumTodoStatus.Pending,
-    priority: EnumTodoPriority.Medium,
-    dueDate: undefined,
-    reminderDate: undefined
+    status: EnumRequestStage.Created,
+    priority: EnumRequestPriority.Medium,
+    dueDate: null,
+    reminderDate: null
   };
 
-  const form = useForm<TodoFormValues>({
-    resolver: zodResolver(todoFormSchema),
+  const form = useForm<RequestFormValues>({
+    resolver: zodResolver(requestFormSchema),
     defaultValues
   });
 
-  // If editTodoId is provided, load that todos data
   React.useEffect(() => {
-    if (editTodoId) {
-      const todoToEdit = todos.find((todo) => todo.id === editTodoId);
-      if (todoToEdit) {
+    if (editId) {
+      const item = items.find((entry) => entry.id === editId);
+      if (item) {
         form.reset({
-          title: todoToEdit.title,
-          description: todoToEdit.description,
-          assignedTo: todoToEdit.assignedTo,
-          status: todoToEdit.status as TodoFormValues["status"],
-          priority: todoToEdit.priority as TodoFormValues["priority"],
-          dueDate: todoToEdit.dueDate,
-          reminderDate: todoToEdit.reminderDate
+          title: item.title,
+          description: item.description,
+          assignedTo: item.assignedTo,
+          status: item.status as RequestFormValues["status"],
+          priority: item.priority as RequestFormValues["priority"],
+          dueDate: item.dueDate ?? null,
+          reminderDate: item.reminderDate ?? null
         });
-        setAssignedUsers(todoToEdit.assignedTo);
+        setAssignedUsers(item.assignedTo);
       }
     } else {
       form.reset(defaultValues);
       setAssignedUsers([]);
     }
-  }, [editTodoId, todos, isOpen, form]);
+  }, [editId, items, isOpen, form]);
 
-  const onSubmit = (data: TodoFormValues) => {
-    // Ensure assignedTo is updated with the latest assignedUsers state
+  const onSubmit = async (data: RequestFormValues) => {
     data.assignedTo = assignedUsers;
-
-    if (editTodoId) {
-      updateTodo(editTodoId, data);
-      toast.success("Your to-do has been updated successfully.");
-    } else {
-      addTodo(data);
-      toast.success("Your new to-do has been added successfully.");
+    try {
+      if (editId) {
+        await updateItem(editId, data);
+        toast.success("Service request updated");
+      } else {
+        await addItem(data);
+        toast.success("Service request created");
+      }
+      form.reset();
+      setAssignedUsers([]);
+      setNewUser("");
+      onClose();
+    } catch (error) {
+      console.error(error);
+      toast.error("Unable to save service request");
     }
-
-    form.reset();
-    setAssignedUsers([]);
-    setNewUser("");
-    onClose();
   };
 
   const addAssignedUser = () => {
     if (newUser.trim() && !assignedUsers.includes(newUser.trim())) {
-      const updatedUsers = [...assignedUsers, newUser.trim()];
-      setAssignedUsers(updatedUsers);
-      form.setValue("assignedTo", updatedUsers);
+      const updated = [...assignedUsers, newUser.trim()];
+      setAssignedUsers(updated);
+      form.setValue("assignedTo", updated);
       setNewUser("");
     }
   };
 
   const removeAssignedUser = (user: string) => {
-    const updatedUsers = assignedUsers.filter((u) => u !== user);
-    setAssignedUsers(updatedUsers);
-    form.setValue("assignedTo", updatedUsers);
+    const updated = assignedUsers.filter((entry) => entry !== user);
+    setAssignedUsers(updated);
+    form.setValue("assignedTo", updated);
   };
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{editTodoId ? "Edit To-Do" : "Add New To-Do"}</SheetTitle>
+          <SheetTitle>{editId ? "Edit service request" : "Add service request"}</SheetTitle>
         </SheetHeader>
 
         <Form {...form}>
@@ -163,7 +166,7 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
             />
 
             <FormItem>
-              <FormLabel>Assigned To</FormLabel>
+              <FormLabel>Assigned to</FormLabel>
               <div className="flex flex-wrap items-center gap-2">
                 {assignedUsers.map((user) => (
                   <Badge
@@ -192,11 +195,11 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
                   <Plus />
                 </Button>
               </div>
-              {form.formState.errors.assignedTo && (
+              {form.formState.errors.assignedTo ? (
                 <p className="text-destructive mt-1 text-sm font-medium">
                   {form.formState.errors.assignedTo.message}
                 </p>
-              )}
+              ) : null}
             </FormItem>
 
             <FormField
@@ -204,7 +207,7 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
               name="dueDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Due Date</FormLabel>
+                  <FormLabel>Due date</FormLabel>
                   <FormControl>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -221,7 +224,6 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          disabled={{ before: new Date() }}
                           selected={field.value || undefined}
                           onSelect={field.onChange}
                         />
@@ -238,7 +240,7 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
               name="reminderDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reminder Date</FormLabel>
+                  <FormLabel>Reminder date</FormLabel>
                   <FormControl>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -255,7 +257,6 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          disabled={{ before: new Date() }}
                           selected={field.value || undefined}
                           onSelect={field.onChange}
                         />
@@ -273,21 +274,19 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel>Stage</FormLabel>
                     <FormControl>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder="Select stage" />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(EnumTodoStatus).map((status) => (
-                            <SelectItem key={status} value={status}>
+                          {Object.values(EnumRequestStage).map((stage) => (
+                            <SelectItem key={stage} value={stage}>
                               <span
-                                className={cn(
-                                  "size-2 rounded-full",
-                                  statusDotColors[status]
-                                )}></span>
-                              {todoStatusNamed[status]}
+                                className={cn("size-2 rounded-full", statusDotColors[stage])}
+                              />
+                              {stageNamed[stage]}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -310,13 +309,11 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
                           <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(EnumTodoPriority).map((priority) => (
+                          {Object.values(EnumRequestPriority).map((priority) => (
                             <SelectItem className="capitalize" key={priority} value={priority}>
                               <span
-                                className={cn(
-                                  "size-2 rounded-full",
-                                  priorityDotColors[priority]
-                                )}></span>
+                                className={cn("size-2 rounded-full", priorityDotColors[priority])}
+                              />
                               {priority}
                             </SelectItem>
                           ))}
@@ -330,13 +327,11 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
             </div>
 
             <Button className="w-full" type="submit">
-              {editTodoId ? "Save Changes" : "Add To-Do"}
+              {editId ? "Save changes" : "Add service request"}
             </Button>
           </form>
         </Form>
       </SheetContent>
     </Sheet>
   );
-};
-
-export default AddTodoSheet;
+}

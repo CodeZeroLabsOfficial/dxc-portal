@@ -1,29 +1,25 @@
-import React from "react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FilterTab } from "../types";
-import { EnumTodoStatus, todoStatusNamed } from "../enum";
+"use client";
 
-interface StatusTabsProps {
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { FilterTab } from "../types";
+import { EnumRequestStage, stageNamed } from "../enum";
+
+type StatusTabsProps = {
   onTabChange: (tab: FilterTab) => void;
   activeTab: FilterTab;
-}
+};
 
-const StatusTabs: React.FC<StatusTabsProps> = ({ onTabChange, activeTab }) => {
+export default function StatusTabs({ onTabChange, activeTab }: StatusTabsProps) {
   return (
-    <Tabs
-      defaultValue={activeTab}
-      onValueChange={(value) => onTabChange(value as FilterTab)}
-      value={activeTab}>
-      <TabsList>
+    <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as FilterTab)}>
+      <TabsList className="flex h-auto flex-wrap">
         <TabsTrigger value="all">All</TabsTrigger>
-        {Object.values(EnumTodoStatus).map((status) => (
-          <TabsTrigger key={status} value={status}>
-            {todoStatusNamed[status]}
+        {Object.values(EnumRequestStage).map((stage) => (
+          <TabsTrigger key={stage} value={stage}>
+            {stageNamed[stage]}
           </TabsTrigger>
         ))}
       </TabsList>
     </Tabs>
   );
-};
-
-export default StatusTabs;
+}
