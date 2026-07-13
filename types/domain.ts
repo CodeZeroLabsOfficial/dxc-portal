@@ -54,6 +54,26 @@ export type ProjectIssue = {
   createdAt?: Date | null;
 };
 
+export type ProjectActivityType =
+  | "project_updated"
+  | "status_changed"
+  | "progress_changed"
+  | "subtask_added"
+  | "subtask_progress"
+  | "risk_added"
+  | "issue_added"
+  | "finance_updated";
+
+export type ProjectActivity = {
+  id: string;
+  type: ProjectActivityType;
+  title: string;
+  description?: string | null;
+  actorId?: string | null;
+  actorName?: string | null;
+  createdAt: Date | null;
+};
+
 export type ServiceRequest = {
   id: string;
   clientId: string;

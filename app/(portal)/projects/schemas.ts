@@ -10,6 +10,7 @@ export const projectFormSchema = z.object({
   priority: z.enum(
     Object.values(EnumProjectPriority) as [EnumProjectPriority, ...EnumProjectPriority[]]
   ),
+  progress: z.number().min(0).max(100),
   startDate: z.date().optional().nullable(),
   endDate: z.date().optional().nullable(),
   resources: z.array(z.string())

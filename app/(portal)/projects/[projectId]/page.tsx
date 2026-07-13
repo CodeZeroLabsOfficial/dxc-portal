@@ -13,10 +13,13 @@ import {
   updateDoc
 } from "firebase/firestore";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 
 import { db } from "@/lib/firebase";
+import { appendProjectActivity } from "@/lib/project-activity";
 import { averageProgress, mapProjectDoc } from "@/lib/projects";
 import { useActiveClient } from "@/hooks/use-active-client";
+import { useAuth } from "@/hooks/use-auth";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask, UserProfile } from "@/types";
 import { PageBackButton } from "@/components/shared/page-back-button";
 import { PageContent } from "@/components/shared/page-content";
@@ -34,7 +37,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { ProjectActionsMenu } from "./components/project-actions-menu";
 import { ProjectDeleteDialog } from "./components/project-delete-dialog";
 import { ProjectDetailCard } from "./components/project-detail-card";
 import { ProjectEditSheet } from "./components/project-edit-sheet";
@@ -44,6 +46,9 @@ export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId;
   const { activeClient } = useActiveClient();
+  const { user, userProfile } = useAuth();
+  const actorId = user?.uid ?? null;
+  const actorName = userProfile?.displayName ?? user?.email ?? null;
   const [project, setProject] = useState<Project | null>(null);
   const [managerName, setManagerName] = useState("—");
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -193,12 +198,21 @@ export default function ProjectDetailPage() {
       }
     ];
     await refreshProjectProgress(next);
+    await appendProjectActivity({
+      projectId,
+      type: "subtask_added",
+      title: "Subtask added",
+      description: title,
+      actorId,
+      actorName
+    });
     toast.success("Subtask added");
   }
 
   async function updateSubtaskProgress(subtaskId: string, progress: number) {
     const status: ProjectSubtask["status"] =
       progress >= 100 ? "done" : progress > 0 ? "in_progress" : "todo";
+    const current = subtasks.find((item) => item.id === subtaskId);
     await updateDoc(doc(db, "projects", projectId, "subtasks", subtaskId), {
       progress,
       status
@@ -207,12 +221,23 @@ export default function ProjectDetailPage() {
       item.id === subtaskId ? { ...item, progress, status } : item
     );
     await refreshProjectProgress(next);
+    await appendProjectActivity({
+      projectId,
+      type: "subtask_progress",
+      title: "Subtask progress updated",
+      description: current
+        ? `${current.title}: ${current.progress}% → ${progress}%`
+        : `${progress}%`,
+      actorId,
+      actorName
+    });
   }
 
   async function addRisk() {
     if (!riskTitle.trim()) return;
+    const title = riskTitle.trim();
     await addDoc(collection(db, "projects", projectId, "risks"), {
-      title: riskTitle.trim(),
+      title,
       description: null,
       severity: "medium",
       status: "open",
@@ -220,13 +245,22 @@ export default function ProjectDetailPage() {
       createdAt: serverTimestamp()
     });
     setRiskTitle("");
+    await appendProjectActivity({
+      projectId,
+      type: "risk_added",
+      title: "Risk added",
+      description: title,
+      actorId,
+      actorName
+    });
     toast.success("Risk added");
   }
 
   async function addIssue() {
     if (!issueTitle.trim()) return;
+    const title = issueTitle.trim();
     await addDoc(collection(db, "projects", projectId, "issues"), {
-      title: issueTitle.trim(),
+      title,
       description: null,
       severity: "medium",
       status: "open",
@@ -234,6 +268,14 @@ export default function ProjectDetailPage() {
       createdAt: serverTimestamp()
     });
     setIssueTitle("");
+    await appendProjectActivity({
+      projectId,
+      type: "issue_added",
+      title: "Issue added",
+      description: title,
+      actorId,
+      actorName
+    });
     toast.success("Issue added");
   }
 
@@ -245,6 +287,14 @@ export default function ProjectDetailPage() {
         currency: "AUD"
       },
       updatedAt: serverTimestamp()
+    });
+    await appendProjectActivity({
+      projectId,
+      type: "finance_updated",
+      title: "Finance updated",
+      description: `Allocated ${Number(allocated) || 0} · Spent ${Number(spent) || 0}`,
+      actorId,
+      actorName
     });
     toast.success("Finance updated");
   }
@@ -266,10 +316,10 @@ export default function ProjectDetailPage() {
     <PageContent>
       <div className="flex items-center justify-between">
         <PageBackButton href="/projects" label="Projects" />
-        <ProjectActionsMenu
-          onEdit={() => setEditOpen(true)}
-          onDelete={() => setDeleteOpen(true)}
-        />
+        <Button size="sm" onClick={() => setEditOpen(true)}>
+          <Pencil />
+          Edit
+        </Button>
       </div>
 
       <Tabs defaultValue="overview" className="gap-4">
@@ -393,6 +443,7 @@ export default function ProjectDetailPage() {
         users={users}
         open={editOpen}
         onOpenChange={setEditOpen}
+        onDelete={() => setDeleteOpen(true)}
       />
       <ProjectDeleteDialog
         projectId={project.id}

@@ -1,8 +1,11 @@
-import type { ReactNode } from "react";
+"use client";
 
 import { formatProjectDate, projectStatusNamed } from "@/lib/projects";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask } from "@/types";
-import { MutedText, SectionTitle } from "@/components/shared/typography";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { ProjectActivityStream } from "./project-activity-stream";
 
 type ProjectOverviewPanelProps = {
   project: Project;
@@ -13,28 +16,26 @@ type ProjectOverviewPanelProps = {
   issues: ProjectIssue[];
 };
 
-function OverviewBlock({
-  title,
+function DetailSection({
+  label,
   children
 }: {
-  title: string;
-  children: ReactNode;
+  label: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-2">
-      <SectionTitle className="text-base">{title}</SectionTitle>
-      {children}
+    <div>
+      <p className="text-muted-foreground mb-3 text-xs font-medium uppercase">{label}</p>
+      <div className="space-y-3">{children}</div>
     </div>
   );
 }
 
-function StatRow({ label, value, capitalize }: { label: string; value: string; capitalize?: boolean }) {
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 text-sm">
-      <MutedText>{label}</MutedText>
-      <span className={capitalize ? "font-medium capitalize tabular-nums" : "font-medium tabular-nums"}>
-        {value}
-      </span>
+    <div className="flex items-start justify-between gap-4 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium">{value}</span>
     </div>
   );
 }
@@ -64,42 +65,70 @@ export function ProjectOverviewPanel({
     }).format(value);
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
-      <OverviewBlock title="Status">
-        <StatRow
-          label="Status"
-          value={projectStatusNamed[project.status] ?? project.status}
-        />
-        <StatRow label="Priority" value={project.priority} capitalize />
-        <StatRow label="Progress" value={`${project.progress}%`} />
-      </OverviewBlock>
+    <div className="grid gap-4 xl:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Project details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <DetailSection label="Status">
+            <DetailRow
+              label="Status"
+              value={
+                <Badge variant="secondary" className="capitalize">
+                  {projectStatusNamed[project.status] ?? project.status}
+                </Badge>
+              }
+            />
+            <DetailRow
+              label="Priority"
+              value={<span className="capitalize">{project.priority}</span>}
+            />
+            <div className="space-y-2">
+              <DetailRow label="Progress" value={`${project.progress}%`} />
+              <Progress value={project.progress} />
+            </div>
+          </DetailSection>
 
-      <OverviewBlock title="Schedule">
-        <StatRow
-          label="Range"
-          value={`${formatProjectDate(project.startDate)} → ${formatProjectDate(project.endDate)}`}
-        />
-      </OverviewBlock>
+          <DetailSection label="Ownership">
+            <DetailRow label="Client" value={clientName} />
+            <DetailRow label="Manager" value={managerName} />
+            <DetailRow
+              label="Resources"
+              value={
+                project.resources.length
+                  ? project.resources.join(", ")
+                  : "—"
+              }
+            />
+          </DetailSection>
 
-      <OverviewBlock title="Ownership">
-        <StatRow label="Client" value={clientName} />
-        <StatRow label="Manager" value={managerName} />
-      </OverviewBlock>
+          <DetailSection label="Schedule">
+            <DetailRow
+              label="Start"
+              value={formatProjectDate(project.startDate)}
+            />
+            <DetailRow label="End" value={formatProjectDate(project.endDate)} />
+          </DetailSection>
 
-      <OverviewBlock title="Work summary">
-        <StatRow
-          label="Subtasks"
-          value={`${subtasks.length} (${done} done · ${inProgress} in progress · ${todo} todo)`}
-        />
-        <StatRow label="Risks" value={`${openRisks} open`} />
-        <StatRow label="Issues" value={`${openIssues} open`} />
-      </OverviewBlock>
+          <DetailSection label="Work summary">
+            <DetailRow
+              label="Subtasks"
+              value={`${subtasks.length} (${done} done · ${inProgress} in progress · ${todo} todo)`}
+            />
+            <DetailRow label="Risks" value={`${openRisks} open`} />
+            <DetailRow label="Issues" value={`${openIssues} open`} />
+          </DetailSection>
 
-      <OverviewBlock title="Budget snapshot">
-        <StatRow label="Allocated" value={money(project.budget.allocated)} />
-        <StatRow label="Spent" value={money(project.budget.spent)} />
-        <StatRow label="Remaining" value={money(remaining)} />
-      </OverviewBlock>
+          <DetailSection label="Budget">
+            <DetailRow label="Allocated" value={money(project.budget.allocated)} />
+            <DetailRow label="Spent" value={money(project.budget.spent)} />
+            <DetailRow label="Remaining" value={money(remaining)} />
+          </DetailSection>
+        </CardContent>
+      </Card>
+
+      <ProjectActivityStream projectId={project.id} />
     </div>
   );
 }

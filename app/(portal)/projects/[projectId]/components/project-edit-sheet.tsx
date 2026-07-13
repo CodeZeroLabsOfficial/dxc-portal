@@ -2,13 +2,15 @@
 
 import React from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, X } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, X } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Timestamp, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { toast } from "sonner";
 
+import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
+import { appendProjectActivity } from "@/lib/project-activity";
 import { cn } from "@/lib/utils";
 import type { Project, UserProfile } from "@/types";
 import {
@@ -22,6 +24,7 @@ import { projectFormSchema, type ProjectFormValues } from "../../schemas";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -46,6 +49,7 @@ type ProjectEditSheetProps = {
   users: UserProfile[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDelete: () => void;
 };
 
 function isProjectManager(user: UserProfile) {
@@ -56,8 +60,12 @@ export function ProjectEditSheet({
   project,
   users,
   open,
-  onOpenChange
+  onOpenChange,
+  onDelete
 }: ProjectEditSheetProps) {
+  const { user, userProfile } = useAuth();
+  const actorId = user?.uid ?? null;
+  const actorName = userProfile?.displayName ?? user?.email ?? null;
   const [resources, setResources] = React.useState<string[]>(project.resources ?? []);
   const [newResource, setNewResource] = React.useState("");
 
@@ -70,6 +78,7 @@ export function ProjectEditSheet({
       managerId: project.managerId,
       status: project.status as ProjectFormValues["status"],
       priority: project.priority as ProjectFormValues["priority"],
+      progress: project.progress ?? 0,
       startDate: project.startDate ?? null,
       endDate: project.endDate ?? null,
       resources: project.resources ?? []
@@ -83,6 +92,7 @@ export function ProjectEditSheet({
       managerId: project.managerId,
       status: project.status as ProjectFormValues["status"],
       priority: project.priority as ProjectFormValues["priority"],
+      progress: project.progress ?? 0,
       startDate: project.startDate ?? null,
       endDate: project.endDate ?? null,
       resources: project.resources ?? []
@@ -114,11 +124,49 @@ export function ProjectEditSheet({
         managerId: data.managerId,
         status: data.status,
         priority: data.priority,
+        progress: data.progress,
         startDate: data.startDate ? Timestamp.fromDate(data.startDate) : null,
         endDate: data.endDate ? Timestamp.fromDate(data.endDate) : null,
         resources: data.resources,
         updatedAt: serverTimestamp()
       });
+
+      const actor = { actorId, actorName };
+      if (data.status !== project.status) {
+        await appendProjectActivity({
+          projectId: project.id,
+          type: "status_changed",
+          title: "Status updated",
+          description: `${projectStatusNamed[project.status] ?? project.status} → ${projectStatusNamed[data.status] ?? data.status}`,
+          ...actor
+        });
+      }
+      if (data.progress !== project.progress) {
+        await appendProjectActivity({
+          projectId: project.id,
+          type: "progress_changed",
+          title: "Progress updated",
+          description: `${project.progress}% → ${data.progress}%`,
+          ...actor
+        });
+      }
+      const otherChanges =
+        data.name.trim() !== project.name ||
+        data.managerId !== project.managerId ||
+        data.priority !== project.priority ||
+        (data.startDate?.getTime() ?? null) !== (project.startDate?.getTime() ?? null) ||
+        (data.endDate?.getTime() ?? null) !== (project.endDate?.getTime() ?? null) ||
+        JSON.stringify(data.resources) !== JSON.stringify(project.resources);
+      if (otherChanges) {
+        await appendProjectActivity({
+          projectId: project.id,
+          type: "project_updated",
+          title: "Project details updated",
+          description: data.name.trim() !== project.name ? `Renamed to “${data.name.trim()}”` : null,
+          ...actor
+        });
+      }
+
       toast.success("Project updated");
       onOpenChange(false);
     } catch (error) {
@@ -248,6 +296,32 @@ export function ProjectEditSheet({
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="progress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Progress</FormLabel>
+                  <FormControl>
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <Slider
+                        aria-label="Project progress"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={[field.value]}
+                        onValueChange={(value) => field.onChange(value[0] ?? 0)}
+                      />
+                      <output className="w-10 text-sm font-medium tabular-nums">
+                        {field.value}
+                      </output>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
@@ -350,11 +424,23 @@ export function ProjectEditSheet({
               </div>
             </FormItem>
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  onOpenChange(false);
+                  onDelete();
+                }}>
+                <Trash2 />
+                Delete
               </Button>
-              <Button type="submit">Save</Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Save</Button>
+              </div>
             </div>
           </form>
         </Form>
