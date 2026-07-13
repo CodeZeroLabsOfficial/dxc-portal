@@ -10,7 +10,9 @@ import {
 } from "react";
 import {
   User,
+  createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   updateProfile
@@ -26,6 +28,8 @@ type AuthContextValue = {
   userProfile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -132,6 +136,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   }, []);
 
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const name = displayName.trim() || email.split("@")[0] || "User";
+    await updateProfile(credential.user, { displayName: name });
+    await setDoc(
+      doc(db, "users", credential.user.uid),
+      {
+        displayName: name,
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  }, []);
+
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
     router.replace("/login");
@@ -143,10 +165,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userProfile,
       loading,
       signIn,
+      signUp,
+      resetPassword,
       signOut,
       refreshProfile
     }),
-    [user, userProfile, loading, signIn, signOut, refreshProfile]
+    [user, userProfile, loading, signIn, signUp, resetPassword, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
