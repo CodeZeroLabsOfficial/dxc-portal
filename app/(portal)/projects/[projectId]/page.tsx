@@ -17,7 +17,7 @@ import { Pencil } from "lucide-react";
 
 import { db } from "@/lib/firebase";
 import { appendProjectActivity } from "@/lib/project-activity";
-import { averageProgress, mapProjectDoc } from "@/lib/projects";
+import { mapProjectDoc, toProjectDate } from "@/lib/projects";
 import { useActiveClient } from "@/hooks/use-active-client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask, UserProfile } from "@/types";
@@ -28,19 +28,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import { ProjectDeleteDialog } from "./components/project-delete-dialog";
 import { ProjectDetailCard } from "./components/project-detail-card";
 import { ProjectEditSheet } from "./components/project-edit-sheet";
 import { ProjectOverviewPanel } from "./components/project-overview-panel";
+import { ProjectSubtasksPanel } from "./components/project-subtasks-panel";
 
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
@@ -55,7 +48,6 @@ export default function ProjectDetailPage() {
   const [subtasks, setSubtasks] = useState<ProjectSubtask[]>([]);
   const [risks, setRisks] = useState<ProjectRisk[]>([]);
   const [issues, setIssues] = useState<ProjectIssue[]>([]);
-  const [subtaskTitle, setSubtaskTitle] = useState("");
   const [riskTitle, setRiskTitle] = useState("");
   const [issueTitle, setIssueTitle] = useState("");
   const [allocated, setAllocated] = useState("0");
@@ -123,8 +115,9 @@ export default function ProjectDetailPage() {
             id: item.id,
             title: data.title,
             assigneeId: data.assigneeId ?? null,
-            status: data.status,
+            status: data.status ?? "todo",
             progress: data.progress ?? 0,
+            dueDate: toProjectDate(data.dueDate),
             order: data.order ?? 0
           };
         })
@@ -166,72 +159,6 @@ export default function ProjectDetailPage() {
       unsubIssues();
     };
   }, [projectId]);
-
-  async function refreshProjectProgress(nextSubtasks: ProjectSubtask[]) {
-    const progress = averageProgress(nextSubtasks.map((item) => item.progress));
-    await updateDoc(doc(db, "projects", projectId), {
-      progress,
-      updatedAt: serverTimestamp()
-    });
-  }
-
-  async function addSubtask() {
-    if (!subtaskTitle.trim()) return;
-    const title = subtaskTitle.trim();
-    const created = await addDoc(collection(db, "projects", projectId, "subtasks"), {
-      title,
-      assigneeId: null,
-      status: "todo",
-      progress: 0,
-      dueDate: null,
-      order: subtasks.length
-    });
-    setSubtaskTitle("");
-    const next = [
-      ...subtasks,
-      {
-        id: created.id,
-        title,
-        status: "todo" as const,
-        progress: 0,
-        order: subtasks.length
-      }
-    ];
-    await refreshProjectProgress(next);
-    await appendProjectActivity({
-      projectId,
-      type: "subtask_added",
-      title: "Subtask added",
-      description: title,
-      actorId,
-      actorName
-    });
-    toast.success("Subtask added");
-  }
-
-  async function updateSubtaskProgress(subtaskId: string, progress: number) {
-    const status: ProjectSubtask["status"] =
-      progress >= 100 ? "done" : progress > 0 ? "in_progress" : "todo";
-    const current = subtasks.find((item) => item.id === subtaskId);
-    await updateDoc(doc(db, "projects", projectId, "subtasks", subtaskId), {
-      progress,
-      status
-    });
-    const next = subtasks.map((item) =>
-      item.id === subtaskId ? { ...item, progress, status } : item
-    );
-    await refreshProjectProgress(next);
-    await appendProjectActivity({
-      projectId,
-      type: "subtask_progress",
-      title: "Subtask progress updated",
-      description: current
-        ? `${current.title}: ${current.progress}% → ${progress}%`
-        : `${progress}%`,
-      actorId,
-      actorName
-    });
-  }
 
   async function addRisk() {
     if (!riskTitle.trim()) return;
@@ -341,40 +268,13 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="subtasks" className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="New subtask"
-              value={subtaskTitle}
-              onChange={(e) => setSubtaskTitle(e.target.value)}
-            />
-            <Button onClick={() => void addSubtask()}>Add</Button>
-          </div>
-          <div className="space-y-3">
-            {subtasks.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="flex items-center justify-between gap-4 py-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.title}</p>
-                    <Progress value={item.progress} className="mt-2" />
-                  </div>
-                  <Select
-                    value={String(item.progress)}
-                    onValueChange={(value) => void updateSubtaskProgress(item.id, Number(value))}>
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[0, 25, 50, 75, 100].map((value) => (
-                        <SelectItem key={value} value={String(value)}>
-                          {value}%
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <ProjectSubtasksPanel
+            projectId={projectId}
+            subtasks={subtasks}
+            users={users}
+            actorId={actorId}
+            actorName={actorName}
+          />
         </TabsContent>
 
         <TabsContent value="risks" className="space-y-6">
