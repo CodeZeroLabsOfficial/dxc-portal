@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -23,9 +22,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask, UserProfile } from "@/types";
 import { PageBackButton } from "@/components/shared/page-back-button";
 import { PageContent } from "@/components/shared/page-content";
-import { SectionTitle } from "@/components/shared/typography";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -33,6 +30,7 @@ import { ProjectDeleteDialog } from "./components/project-delete-dialog";
 import { ProjectDetailCard } from "./components/project-detail-card";
 import { ProjectEditSheet } from "./components/project-edit-sheet";
 import { ProjectOverviewPanel } from "./components/project-overview-panel";
+import { ProjectRisksIssuesPanel } from "./components/project-risks-issues-panel";
 import { ProjectSubtasksPanel } from "./components/project-subtasks-panel";
 
 export default function ProjectDetailPage() {
@@ -48,8 +46,6 @@ export default function ProjectDetailPage() {
   const [subtasks, setSubtasks] = useState<ProjectSubtask[]>([]);
   const [risks, setRisks] = useState<ProjectRisk[]>([]);
   const [issues, setIssues] = useState<ProjectIssue[]>([]);
-  const [riskTitle, setRiskTitle] = useState("");
-  const [issueTitle, setIssueTitle] = useState("");
   const [allocated, setAllocated] = useState("0");
   const [spent, setSpent] = useState("0");
   const [editOpen, setEditOpen] = useState(false);
@@ -160,52 +156,6 @@ export default function ProjectDetailPage() {
     };
   }, [projectId]);
 
-  async function addRisk() {
-    if (!riskTitle.trim()) return;
-    const title = riskTitle.trim();
-    await addDoc(collection(db, "projects", projectId, "risks"), {
-      title,
-      description: null,
-      severity: "medium",
-      status: "open",
-      ownerId: null,
-      createdAt: serverTimestamp()
-    });
-    setRiskTitle("");
-    await appendProjectActivity({
-      projectId,
-      type: "risk_added",
-      title: "Risk added",
-      description: title,
-      actorId,
-      actorName
-    });
-    toast.success("Risk added");
-  }
-
-  async function addIssue() {
-    if (!issueTitle.trim()) return;
-    const title = issueTitle.trim();
-    await addDoc(collection(db, "projects", projectId, "issues"), {
-      title,
-      description: null,
-      severity: "medium",
-      status: "open",
-      ownerId: null,
-      createdAt: serverTimestamp()
-    });
-    setIssueTitle("");
-    await appendProjectActivity({
-      projectId,
-      type: "issue_added",
-      title: "Issue added",
-      description: title,
-      actorId,
-      actorName
-    });
-    toast.success("Issue added");
-  }
-
   async function saveFinance() {
     await updateDoc(doc(db, "projects", projectId), {
       budget: {
@@ -273,49 +223,14 @@ export default function ProjectDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="risks" className="space-y-6">
-          <div className="space-y-3">
-            <SectionTitle className="text-base">Risks</SectionTitle>
-            <div className="flex gap-2">
-              <Input
-                placeholder="New risk"
-                value={riskTitle}
-                onChange={(e) => setRiskTitle(e.target.value)}
-              />
-              <Button onClick={() => void addRisk()}>Add</Button>
-            </div>
-            {risks.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="py-4 text-sm">
-                  <p className="font-medium">{item.title}</p>
-                  <p className="text-muted-foreground capitalize">
-                    {item.severity} · {item.status}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="space-y-3">
-            <SectionTitle className="text-base">Issues</SectionTitle>
-            <div className="flex gap-2">
-              <Input
-                placeholder="New issue"
-                value={issueTitle}
-                onChange={(e) => setIssueTitle(e.target.value)}
-              />
-              <Button onClick={() => void addIssue()}>Add</Button>
-            </div>
-            {issues.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="py-4 text-sm">
-                  <p className="font-medium">{item.title}</p>
-                  <p className="text-muted-foreground capitalize">
-                    {item.severity} · {item.status.replace("_", " ")}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <TabsContent value="risks" className="space-y-4">
+          <ProjectRisksIssuesPanel
+            projectId={projectId}
+            risks={risks}
+            issues={issues}
+            actorId={actorId}
+            actorName={actorName}
+          />
         </TabsContent>
 
         <TabsContent value="finance" className="space-y-4">

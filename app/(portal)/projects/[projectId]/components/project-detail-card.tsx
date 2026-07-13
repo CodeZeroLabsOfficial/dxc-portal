@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageTitle } from "@/components/shared/typography";
+import { cn } from "@/lib/utils";
+import { priorityClasses, statusClasses } from "../../enum";
 
 type ProjectDetailCardProps = {
   project: Project;
@@ -41,9 +43,11 @@ export function ProjectDetailCard({ project }: ProjectDetailCardProps) {
       <div className="border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/20 px-4 py-5 sm:px-6 md:px-8 md:py-6">
         <div className="min-w-0 space-y-3">
           <PageTitle>{project.name}</PageTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className="border-0 capitalize">{statusLabel}</Badge>
-            <Badge variant="secondary" className="capitalize">
+          <div className="flex flex-wrap items-center gap-2 capitalize">
+            <Badge className={cn("border-0", statusClasses[project.status])}>
+              {statusLabel}
+            </Badge>
+            <Badge className={cn("border-0", priorityClasses[project.priority])}>
               {project.priority}
             </Badge>
           </div>

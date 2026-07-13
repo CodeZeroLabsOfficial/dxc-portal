@@ -27,6 +27,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { priorityClasses, statusClasses } from "./enum";
 import {
   Dialog,
   DialogContent,
@@ -185,10 +187,15 @@ export default function ProjectsPage() {
                     </div>
                     <Progress value={project.progress} />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Badge className="capitalize">
-                      {projectStatusNamed[project.status] ?? project.status}
-                    </Badge>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2 capitalize">
+                      <Badge className={cn("border-0", statusClasses[project.status])}>
+                        {projectStatusNamed[project.status] ?? project.status}
+                      </Badge>
+                      <Badge className={cn("border-0", priorityClasses[project.priority])}>
+                        {project.priority}
+                      </Badge>
+                    </div>
                     <span className="text-muted-foreground text-sm">
                       ${project.budget.spent.toLocaleString()} / $
                       {project.budget.allocated.toLocaleString()} {project.budget.currency}
