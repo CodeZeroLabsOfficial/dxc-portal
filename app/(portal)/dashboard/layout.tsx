@@ -2,8 +2,8 @@ import { generateMeta } from "@/lib/utils";
 
 export async function generateMetadata() {
   return generateMeta({
-    title: "Dashboard",
-    description: "Client overview and recent activity.",
+    title: "Project Dashboard",
+    description: "Track projects, deadlines, and team efficiency.",
     canonical: "/dashboard"
   });
 }
