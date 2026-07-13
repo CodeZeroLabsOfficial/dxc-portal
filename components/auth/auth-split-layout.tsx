@@ -7,7 +7,7 @@ export function AuthSplitLayout({ children }: { children: ReactNode }) {
         <img
           width={1000}
           height={1000}
-          src="/images/extra/image4.jpg"
+          src="/images/auth/login-splash.png"
           alt=""
           className="h-full w-full object-cover"
         />

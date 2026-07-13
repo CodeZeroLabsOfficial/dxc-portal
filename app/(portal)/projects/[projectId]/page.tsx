@@ -6,6 +6,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   serverTimestamp,
   updateDoc
@@ -13,17 +14,17 @@ import {
 import { toast } from "sonner";
 
 import { db } from "@/lib/firebase";
-import { averageProgress } from "@/lib/projects";
+import { averageProgress, toProjectDate } from "@/lib/projects";
+import { useActiveClient } from "@/hooks/use-active-client";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask } from "@/types";
 import { PageContent } from "@/components/shared/page-content";
-import { PageHeader } from "@/components/shared/page-header";
-import { SectionHeader } from "@/components/shared/section-header";
+import { SectionTitle } from "@/components/shared/typography";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -31,11 +32,15 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { ProjectDetailCard } from "./components/project-detail-card";
+import { ProjectOverviewPanel } from "./components/project-overview-panel";
 
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId;
+  const { activeClient } = useActiveClient();
   const [project, setProject] = useState<Project | null>(null);
+  const [managerName, setManagerName] = useState("—");
   const [subtasks, setSubtasks] = useState<ProjectSubtask[]>([]);
   const [risks, setRisks] = useState<ProjectRisk[]>([]);
   const [issues, setIssues] = useState<ProjectIssue[]>([]);
@@ -59,14 +64,38 @@ export default function ProjectDetailPage() {
         managerId: data.managerId,
         status: data.status,
         progress: data.progress ?? 0,
+        startDate: toProjectDate(data.startDate),
+        endDate: toProjectDate(data.endDate),
         budget: data.budget ?? { allocated: 0, spent: 0, currency: "AUD" },
-        createdBy: data.createdBy
+        createdBy: data.createdBy,
+        createdAt: toProjectDate(data.createdAt),
+        updatedAt: toProjectDate(data.updatedAt)
       });
       setAllocated(String(data.budget?.allocated ?? 0));
       setSpent(String(data.budget?.spent ?? 0));
     });
     return () => unsubscribe();
   }, [projectId]);
+
+  useEffect(() => {
+    if (!project?.managerId) {
+      setManagerName("—");
+      return;
+    }
+    let cancelled = false;
+    void getDoc(doc(db, "users", project.managerId)).then((snap) => {
+      if (cancelled) return;
+      if (!snap.exists()) {
+        setManagerName("—");
+        return;
+      }
+      const data = snap.data();
+      setManagerName(data.displayName?.trim() || data.email || "—");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [project?.managerId]);
 
   useEffect(() => {
     const unsubSubtasks = onSnapshot(collection(db, "projects", projectId, "subtasks"), (snap) => {
@@ -208,31 +237,37 @@ export default function ProjectDetailPage() {
     toast.success("Finance updated");
   }
 
+  const clientName = activeClient?.name?.trim() || "—";
+
   if (!project) {
     return (
       <PageContent>
-        <PageHeader title="Project" description="Loading..." />
+        <p className="text-muted-foreground text-sm">Loading…</p>
       </PageContent>
     );
   }
 
   return (
     <PageContent>
-      <PageHeader
-        title={project.name}
-        description={`Progress ${project.progress}% · ${project.status.replace("_", " ")}`}
-      />
-      <Progress value={project.progress} />
+      <Tabs defaultValue="overview" className="gap-4">
+        <ProjectDetailCard
+          project={project}
+          clientName={clientName}
+          managerName={managerName}
+        />
 
-      <Tabs defaultValue="subtasks">
-        <TabsList>
-          <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
-          <TabsTrigger value="risks">Risks & Issues</TabsTrigger>
-          <TabsTrigger value="finance">Finance</TabsTrigger>
-        </TabsList>
+        <TabsContent value="overview" className="space-y-4">
+          <ProjectOverviewPanel
+            project={project}
+            clientName={clientName}
+            managerName={managerName}
+            subtasks={subtasks}
+            risks={risks}
+            issues={issues}
+          />
+        </TabsContent>
 
         <TabsContent value="subtasks" className="space-y-4">
-          <SectionHeader title="Subtasks" />
           <div className="flex gap-2">
             <Input
               placeholder="New subtask"
@@ -271,7 +306,7 @@ export default function ProjectDetailPage() {
 
         <TabsContent value="risks" className="space-y-6">
           <div className="space-y-3">
-            <SectionHeader title="Risks" />
+            <SectionTitle className="text-base">Risks</SectionTitle>
             <div className="flex gap-2">
               <Input
                 placeholder="New risk"
@@ -292,7 +327,7 @@ export default function ProjectDetailPage() {
             ))}
           </div>
           <div className="space-y-3">
-            <SectionHeader title="Issues" />
+            <SectionTitle className="text-base">Issues</SectionTitle>
             <div className="flex gap-2">
               <Input
                 placeholder="New issue"
@@ -315,7 +350,7 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="finance" className="space-y-4">
-          <SectionHeader title="Finance" description="Allocated and spent in AUD" />
+          <p className="text-muted-foreground text-sm">Allocated and spent in AUD</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Allocated</Label>
