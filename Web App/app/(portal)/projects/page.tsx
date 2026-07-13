@@ -1,79 +1,257 @@
-import { Metadata } from "next";
-import { Plus } from "lucide-react";
-import { generateMeta } from "@/lib/utils";
+"use client";
 
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  addDoc,
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  where
+} from "firebase/firestore";
+import { toast } from "sonner";
+import { Plus } from "lucide-react";
+
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/hooks/use-auth";
+import { useActiveClient } from "@/hooks/use-active-client";
+import type { Project, UserProfile } from "@/types";
+import { PageContent } from "@/components/shared/page-content";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { PageHeader } from "@/components/shared/page-header";
-import { PageContent } from "@/components/shared/page-content";
-
-import projects from "./data.json";
-import Link from "next/link";
-
-export async function generateMetadata(): Promise<Metadata> {
-  return generateMeta({
-    title: "Projects",
-    description: "Track project status, progress, and team assignments.",
-    canonical: "/projects"
-  });
-}
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { getDocs } from "firebase/firestore";
 
 export default function ProjectsPage() {
+  const { user } = useAuth();
+  const { activeClient } = useActiveClient();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [managerId, setManagerId] = useState("");
+  const [allocated, setAllocated] = useState("0");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    void getDocs(collection(db, "users")).then((snap) => {
+      setUsers(
+        snap.docs.map((item) => {
+          const data = item.data();
+          return {
+            uid: item.id,
+            displayName: data.displayName ?? "User",
+            email: data.email ?? "",
+            role: data.role ?? "staff"
+          };
+        })
+      );
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!activeClient) {
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const q = query(
+      collection(db, "projects"),
+      where("clientId", "==", activeClient.id),
+      orderBy("updatedAt", "desc")
+    );
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        setProjects(
+          snap.docs.map((item) => {
+            const data = item.data();
+            return {
+              id: item.id,
+              clientId: data.clientId,
+              name: data.name,
+              managerId: data.managerId,
+              status: data.status,
+              progress: data.progress ?? 0,
+              budget: data.budget ?? { allocated: 0, spent: 0, currency: "AUD" },
+              createdBy: data.createdBy
+            };
+          })
+        );
+        setLoading(false);
+      },
+      (error) => {
+        console.error(error);
+        toast.error("Unable to load projects. Check Firestore indexes.");
+        setLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [activeClient]);
+
+  async function createProject() {
+    if (!user || !activeClient || !name.trim() || !managerId) return;
+    setSaving(true);
+    try {
+      await addDoc(collection(db, "projects"), {
+        clientId: activeClient.id,
+        name: name.trim(),
+        managerId,
+        status: "active",
+        progress: 0,
+        startDate: null,
+        endDate: null,
+        budget: {
+          allocated: Number(allocated) || 0,
+          spent: 0,
+          currency: "AUD"
+        },
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      toast.success("Project created");
+      setOpen(false);
+      setName("");
+      setManagerId("");
+      setAllocated("0");
+    } catch (error) {
+      console.error(error);
+      toast.error("Unable to create project");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!activeClient) {
+    return (
+      <PageContent>
+        <PageHeader title="Projects" description="Select a client to continue." />
+      </PageContent>
+    );
+  }
+
   return (
     <PageContent>
       <PageHeader
         title="Projects"
-        description="List of your ongoing projects"
+        description={`Client: ${activeClient.name}`}
         actions={
-          <Button>
+          <Button onClick={() => setOpen(true)}>
             <Plus />
             New Project
           </Button>
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
-        {projects.map((project) => (
-          <Link href={`/projects/${project.id}`} key={project.id}>
-            <Card className="transition-shadow hover:shadow-md">
-              <CardHeader>
-                <CardTitle>{project.title}</CardTitle>
-                <CardDescription>{project.subtitle}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-muted-foreground mb-4 text-sm">{project.date}</div>
-
-                <div className="mb-6">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm opacity-90">Progress</span>
-                    <span className="text-sm font-semibold">{project.progress}%</span>
+      {loading ? (
+        <p className="text-muted-foreground text-sm">Loading...</p>
+      ) : projects.length === 0 ? (
+        <Card>
+          <CardContent className="text-muted-foreground py-8 text-sm">
+            No projects yet for this client.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {projects.map((project) => (
+            <Link href={`/projects/${project.id}`} key={project.id}>
+              <Card className="transition-shadow hover:shadow-md">
+                <CardHeader>
+                  <CardTitle>{project.name}</CardTitle>
+                  <CardDescription>
+                    Manager:{" "}
+                    {users.find((item) => item.uid === project.managerId)?.displayName ?? "—"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span>Progress</span>
+                      <span className="font-semibold">{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} />
                   </div>
-                  <Progress value={project.progress} indicatorColor={project.progressColor} />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2">
-                    {project.team.map((member, i) => (
-                      <Avatar key={i}>
-                        <AvatarImage src={member.avatar} alt={`${member.id}`} />
-                        <AvatarFallback>CN</AvatarFallback>
-                      </Avatar>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <Badge className="capitalize">{project.status.replace("_", " ")}</Badge>
+                    <span className="text-muted-foreground text-sm">
+                      ${project.budget.spent.toLocaleString()} / $
+                      {project.budget.allocated.toLocaleString()} {project.budget.currency}
+                    </span>
                   </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
 
-                  <Badge
-                    className={`${project.badgeColor} border-0 text-white hover:${project.badgeColor}`}>
-                    {project.timeLeft}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Project name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Project manager</Label>
+              <Select value={managerId} onValueChange={setManagerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select manager" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((item) => (
+                    <SelectItem key={item.uid} value={item.uid}>
+                      {item.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Budget allocated (AUD)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={allocated}
+                onChange={(e) => setAllocated(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => void createProject()}
+              disabled={saving || !name.trim() || !managerId}>
+              {saving ? "Creating..." : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContent>
   );
 }

@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
+
+import { useAuth } from "@/hooks/use-auth";
 
 type NavGroup = {
   title: string;
@@ -30,6 +33,7 @@ type NavItem = {
   title: string;
   href: string;
   icon?: LucideIcon;
+  preferenceKey?: "showProjects" | "showServiceRequests" | "showCalendar";
 };
 
 export const navItems: NavGroup[] = [
@@ -37,9 +41,24 @@ export const navItems: NavGroup[] = [
     title: "Workspace",
     items: [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboardIcon },
-      { title: "Projects", href: "/projects", icon: FolderDotIcon },
-      { title: "Service Requests", href: "/service-requests", icon: ClipboardCheckIcon },
-      { title: "Calendar", href: "/calendar", icon: CalendarIcon }
+      {
+        title: "Projects",
+        href: "/projects",
+        icon: FolderDotIcon,
+        preferenceKey: "showProjects"
+      },
+      {
+        title: "Service Requests",
+        href: "/service-requests",
+        icon: ClipboardCheckIcon,
+        preferenceKey: "showServiceRequests"
+      },
+      {
+        title: "Calendar",
+        href: "/calendar",
+        icon: CalendarIcon,
+        preferenceKey: "showCalendar"
+      }
     ]
   },
   {
@@ -59,10 +78,26 @@ function isActive(pathname: string, href: string) {
 export function NavMain() {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { userProfile } = useAuth();
+  const display = userProfile?.preferences?.display;
+
+  const groups = useMemo(
+    () =>
+      navItems
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => {
+            if (!item.preferenceKey) return true;
+            return display?.[item.preferenceKey] ?? true;
+          })
+        }))
+        .filter((group) => group.items.length > 0),
+    [display]
+  );
 
   return (
     <>
-      {navItems.map((group) => (
+      {groups.map((group) => (
         <SidebarGroup key={group.title}>
           <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
           <SidebarGroupContent>
