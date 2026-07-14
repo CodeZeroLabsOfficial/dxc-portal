@@ -1,7 +1,15 @@
 "use client";
 
 import React from "react";
-import { Check, PlusCircleIcon, Trash2, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CircleAlert,
+  Plus,
+  Trash2,
+  X
+} from "lucide-react";
 import {
   addDoc,
   collection,
@@ -26,6 +34,7 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
 
 type ChecklistItem = {
   id: string;
@@ -36,7 +45,9 @@ type ChecklistItem = {
 type ChecklistCardProps = {
   title: string;
   placeholder: string;
-  emptyLabel: string;
+  emptyIcon: LucideIcon;
+  emptyPrimary: string;
+  emptySecondary: React.ReactNode;
   items: ChecklistItem[];
   onAdd: (title: string) => Promise<void>;
   onToggle: (id: string, done: boolean) => Promise<void>;
@@ -46,7 +57,9 @@ type ChecklistCardProps = {
 function ChecklistCard({
   title,
   placeholder,
-  emptyLabel,
+  emptyIcon: EmptyIcon,
+  emptyPrimary,
+  emptySecondary,
   items,
   onAdd,
   onToggle,
@@ -74,19 +87,19 @@ function ChecklistCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
+    <Card className="border-border/80 flex min-h-80 flex-col bg-card/60">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{title}</CardTitle>
         <CardAction>
           {!isAdding ? (
-            <Button variant="outline" size="sm" onClick={() => setIsAdding(true)}>
-              <PlusCircleIcon />
+            <Button size="sm" className="gap-1.5 shadow-sm" onClick={() => setIsAdding(true)}>
+              <Plus className="size-3.5" aria-hidden />
               Add
             </Button>
           ) : null}
         </CardAction>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-1 flex-col space-y-4 pt-0">
         {items.length > 0 ? (
           <div className="space-y-2">
             {items.map((item) => (
@@ -117,9 +130,17 @@ function ChecklistCard({
             ))}
           </div>
         ) : (
-          <div className="bg-muted text-muted-foreground rounded-md p-4 text-center text-sm">
-            {emptyLabel}
-          </div>
+          <Empty className="border-0 flex-1 justify-center p-0 py-12">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <EmptyIcon className="text-muted-foreground/50 size-10" aria-hidden />
+              </EmptyMedia>
+              <EmptyDescription className="max-w-sm space-y-2">
+                <p>{emptyPrimary}</p>
+                <p>{emptySecondary}</p>
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
         {isAdding ? (
@@ -230,7 +251,13 @@ export function ProjectRisksIssuesPanel({
       <ChecklistCard
         title="Risks"
         placeholder="Enter risk title"
-        emptyLabel="No risks yet."
+        emptyIcon={AlertTriangle}
+        emptyPrimary="No risks for this project yet."
+        emptySecondary={
+          <>
+            Use <strong className="text-foreground/90">Add</strong> to capture the first risk.
+          </>
+        }
         items={risks.map((item) => ({
           id: item.id,
           title: item.title,
@@ -243,7 +270,13 @@ export function ProjectRisksIssuesPanel({
       <ChecklistCard
         title="Issues"
         placeholder="Enter issue title"
-        emptyLabel="No issues yet."
+        emptyIcon={CircleAlert}
+        emptyPrimary="No issues for this project yet."
+        emptySecondary={
+          <>
+            Use <strong className="text-foreground/90">Add</strong> to capture the first issue.
+          </>
+        }
         items={issues.map((item) => ({
           id: item.id,
           title: item.title,
