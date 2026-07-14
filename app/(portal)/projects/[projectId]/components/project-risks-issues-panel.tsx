@@ -252,12 +252,8 @@ export function ProjectRisksIssuesPanel({
         title="Risks"
         placeholder="Enter risk title"
         emptyIcon={AlertTriangle}
-        emptyPrimary="No risks for this project yet."
-        emptySecondary={
-          <>
-            Use <strong className="text-foreground/90">Add</strong> to capture the first risk.
-          </>
-        }
+        emptyPrimary="No risks found"
+        emptySecondary="Add a risk to get started."
         items={risks.map((item) => ({
           id: item.id,
           title: item.title,
@@ -271,12 +267,8 @@ export function ProjectRisksIssuesPanel({
         title="Issues"
         placeholder="Enter issue title"
         emptyIcon={CircleAlert}
-        emptyPrimary="No issues for this project yet."
-        emptySecondary={
-          <>
-            Use <strong className="text-foreground/90">Add</strong> to capture the first issue.
-          </>
-        }
+        emptyPrimary="No issues found"
+        emptySecondary="Add an issue to get started."
         items={issues.map((item) => ({
           id: item.id,
           title: item.title,

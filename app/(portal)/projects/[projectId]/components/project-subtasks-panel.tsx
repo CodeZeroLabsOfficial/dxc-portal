@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { ListTodo, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { doc, updateDoc, writeBatch } from "firebase/firestore";
 import { toast } from "sonner";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
 import { ProjectSubtaskItem } from "./project-subtask-item";
 import { ProjectSubtaskSheet } from "./project-subtask-sheet";
 import {
@@ -318,10 +319,17 @@ export function ProjectSubtasksPanel({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <h3 className="text-xl font-medium">No subtasks found</h3>
-          <p className="text-muted-foreground mt-2">Add a subtask to get started</p>
-        </div>
+        <Empty className="border-0 min-h-80 justify-center p-0 py-12">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ListTodo className="text-muted-foreground/50 size-10" aria-hidden />
+            </EmptyMedia>
+            <EmptyDescription className="max-w-sm space-y-2">
+              <p>No subtasks found</p>
+              <p>Add a subtask to get started.</p>
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <DndContext
           sensors={sensors}
