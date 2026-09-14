@@ -21,7 +21,7 @@ const sidebarNavItems = [
   { title: "Appearance", href: "/settings/appearance", icon: PaletteIcon },
   { title: "Notifications", href: "/settings/notifications", icon: BellIcon },
   { title: "Display", href: "/settings/display", icon: ContrastIcon },
-  { title: "Team members", href: "/settings/team-members", icon: UsersIcon }
+  { title: "Team", href: "/settings/team-members", icon: UsersIcon }
 ];
 
 export function SidebarNav() {

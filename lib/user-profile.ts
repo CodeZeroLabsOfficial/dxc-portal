@@ -2,7 +2,18 @@ import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { updateProfile } from "firebase/auth";
 
 import { auth, db } from "@/lib/firebase";
-import type { UserPreferences, UserProfile } from "@/types";
+import type { OrgRole, UserPreferences, UserProfile } from "@/types";
+
+export function mapUserProfile(id: string, data: Record<string, unknown>): UserProfile {
+  return {
+    uid: id,
+    displayName: String(data.displayName ?? "User"),
+    email: String(data.email ?? ""),
+    photoURL: (data.photoURL as string | null) ?? null,
+    role: (data.role as OrgRole) ?? "staff",
+    activeClientId: (data.activeClientId as string | null) ?? null
+  };
+}
 
 export function profileCompletion(profile: UserProfile | null): number {
   if (!profile) return 0;

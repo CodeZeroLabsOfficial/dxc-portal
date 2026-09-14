@@ -1,5 +1,19 @@
-export type OrgRole = "admin" | "manager" | "staff";
-export type ClientMemberRole = "admin" | "manager" | "staff";
+export const ORG_ROLES = ["admin", "manager", "staff"] as const;
+export type OrgRole = (typeof ORG_ROLES)[number];
+export type ClientMemberRole = OrgRole;
+
+export const orgRoleTitle: Record<OrgRole, string> = {
+  admin: "Admin",
+  manager: "Manager",
+  staff: "Staff"
+};
+
+export const orgRoleDescription: Record<OrgRole, string> = {
+  admin: "Full access, including Team.",
+  manager: "Client work and settings. Cannot manage Team.",
+  staff: "Projects, service requests, and calendar."
+};
+
 export type ClientStatus = "active" | "inactive";
 
 export type UserPreferences = {
