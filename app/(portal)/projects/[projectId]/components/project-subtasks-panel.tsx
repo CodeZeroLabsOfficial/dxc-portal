@@ -33,12 +33,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Toggle } from "@/components/ui/toggle";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
 import { ProjectSubtaskItem } from "./project-subtask-item";
 import { ProjectSubtaskSheet } from "./project-subtask-sheet";
@@ -233,167 +239,162 @@ export function ProjectSubtasksPanel({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
-        <div className="text-muted-foreground text-sm">
-          {filtered.length} of {sorted.length} tasks
-        </div>
+    <>
+      <Card className="border-border/80 flex min-h-80 flex-col bg-card/60">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-baseline gap-2 text-base">
+            Tasks
+            <span className="text-muted-foreground text-xs font-normal">
+              {filtered.length} of {sorted.length}
+            </span>
+          </CardTitle>
+          <CardAction className="flex items-center gap-2 @max-md/card:w-full">
+            <div className="relative grow lg:grow-0">
+              <Search className="absolute top-2.5 left-3 size-4 opacity-50" />
+              <Input
+                placeholder="Search tasks..."
+                className="ps-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-        <div className="flex w-full items-center gap-2 lg:w-auto">
-          <div className="relative grow lg:grow-0">
-            <Search className="absolute top-2.5 left-3 size-4 opacity-50" />
-            <Input
-              placeholder="Search tasks..."
-              className="ps-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="outline" className="relative">
-                <SlidersHorizontal />
-                {filterCount > 0 ? (
-                  <Badge
-                    variant="secondary"
-                    className="absolute -end-1.5 -top-1.5 size-4 rounded-full p-0">
-                    {filterCount}
-                  </Badge>
-                ) : null}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-80" align="end">
-              <div className="space-y-6 p-4">
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Status</h4>
-                  <div className="flex gap-2 *:grow">
-                    {(Object.keys(subtaskStatusNamed) as SubtaskStatus[]).map((status) => (
-                      <Toggle
-                        key={status}
-                        variant="outline"
-                        size="sm"
-                        pressed={filterStatus === status}
-                        onPressedChange={() =>
-                          setFilterStatus(filterStatus === status ? null : status)
-                        }
-                        className="px-3 text-xs capitalize">
-                        <span
-                          className={cn("size-2 rounded-full", subtaskStatusDotColors[status])}
-                        />
-                        {subtaskStatusNamed[status]}
-                      </Toggle>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Assignees</h4>
-                  {assigneesInList.length === 0 ? (
-                    <p className="text-muted-foreground text-xs">No assignees yet</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {assigneesInList.map((assignee) => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="outline" className="relative">
+                  <SlidersHorizontal />
+                  {filterCount > 0 ? (
+                    <Badge
+                      variant="secondary"
+                      className="absolute -end-1.5 -top-1.5 size-4 rounded-full p-0">
+                      {filterCount}
+                    </Badge>
+                  ) : null}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-80" align="end">
+                <div className="space-y-6 p-4">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium">Status</h4>
+                    <div className="flex gap-2 *:grow">
+                      {(Object.keys(subtaskStatusNamed) as SubtaskStatus[]).map((status) => (
                         <Toggle
-                          key={assignee.id}
+                          key={status}
                           variant="outline"
                           size="sm"
-                          pressed={filterAssignee.includes(assignee.id)}
-                          onPressedChange={(pressed) =>
-                            handleAssigneeFilter(assignee.id, pressed)
+                          pressed={filterStatus === status}
+                          onPressedChange={() =>
+                            setFilterStatus(filterStatus === status ? null : status)
                           }
-                          className="px-3 text-xs">
-                          {assignee.name}
+                          className="px-3 text-xs capitalize">
+                          <span
+                            className={cn("size-2 rounded-full", subtaskStatusDotColors[status])}
+                          />
+                          {subtaskStatusNamed[status]}
                         </Toggle>
                       ))}
                     </div>
-                  )}
-                </div>
-
-                {filterCount > 0 ? (
-                  <div className="text-end">
-                    <Button variant="link" size="sm" className="px-0!" onClick={clearFilters}>
-                      Clear filters
-                      <X />
-                    </Button>
                   </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium">Assignees</h4>
+                    {assigneesInList.length === 0 ? (
+                      <p className="text-muted-foreground text-xs">No assignees yet</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {assigneesInList.map((assignee) => (
+                          <Toggle
+                            key={assignee.id}
+                            variant="outline"
+                            size="sm"
+                            pressed={filterAssignee.includes(assignee.id)}
+                            onPressedChange={(pressed) =>
+                              handleAssigneeFilter(assignee.id, pressed)
+                            }
+                            className="px-3 text-xs">
+                            {assignee.name}
+                          </Toggle>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {filterCount > 0 ? (
+                    <div className="text-end">
+                      <Button variant="link" size="sm" className="px-0!" onClick={clearFilters}>
+                        Clear filters
+                        <X />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button size="sm" className="gap-1.5 shadow-sm" onClick={openCreate}>
+              <Plus className="size-3.5" aria-hidden />
+              Add
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="flex flex-1 flex-col space-y-4 pt-0">
+          {filtered.length === 0 ? (
+            <Empty className="border-0 flex-1 justify-center p-0 py-12">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ListTodo className="text-muted-foreground/50 size-10" aria-hidden />
+                </EmptyMedia>
+                <EmptyDescription className="max-w-sm space-y-2">
+                  <p>No tasks found</p>
+                  <p>Add a task to get started.</p>
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+              modifiers={[restrictToVerticalAxis]}>
+              <SortableContext
+                items={filtered.map((item) => item.id)}
+                strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {filtered.map((item) => (
+                    <ProjectSubtaskItem
+                      key={item.id}
+                      subtask={item}
+                      assigneeName={
+                        item.assigneeId ? (userNameById.get(item.assigneeId) ?? null) : null
+                      }
+                      onClick={() => {
+                        setEditId(item.id);
+                        setSheetOpen(true);
+                      }}
+                      onStatusToggle={(id, nextDone) => void handleStatusToggle(id, nextDone)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+              <DragOverlay>
+                {activeSubtask ? (
+                  <ProjectSubtaskItem
+                    subtask={activeSubtask}
+                    assigneeName={
+                      activeSubtask.assigneeId
+                        ? (userNameById.get(activeSubtask.assigneeId) ?? null)
+                        : null
+                    }
+                    isDraggingOverlay
+                  />
                 ) : null}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  onClick={openCreate}>
-                  <Plus />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Add task</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <Empty className="border-0 min-h-80 justify-center p-0 py-12">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <ListTodo className="text-muted-foreground/50 size-10" aria-hidden />
-            </EmptyMedia>
-            <EmptyDescription className="max-w-sm space-y-2">
-              <p>No tasks found</p>
-              <p>Add a task to get started.</p>
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
-          modifiers={[restrictToVerticalAxis]}>
-          <SortableContext
-            items={filtered.map((item) => item.id)}
-            strategy={verticalListSortingStrategy}>
-            <div className="grid grid-cols-1 space-y-4">
-              {filtered.map((item) => (
-                <ProjectSubtaskItem
-                  key={item.id}
-                  subtask={item}
-                  assigneeName={
-                    item.assigneeId ? (userNameById.get(item.assigneeId) ?? null) : null
-                  }
-                  onClick={() => {
-                    setEditId(item.id);
-                    setSheetOpen(true);
-                  }}
-                  onStatusToggle={(id, nextDone) => void handleStatusToggle(id, nextDone)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-          <DragOverlay>
-            {activeSubtask ? (
-              <ProjectSubtaskItem
-                subtask={activeSubtask}
-                assigneeName={
-                  activeSubtask.assigneeId
-                    ? (userNameById.get(activeSubtask.assigneeId) ?? null)
-                    : null
-                }
-                isDraggingOverlay
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </CardContent>
+      </Card>
 
       <ProjectSubtaskSheet
         projectId={projectId}
@@ -404,6 +405,6 @@ export function ProjectSubtasksPanel({
         nextOrder={sorted.length}
         onSaved={(subtask, mode) => void handleSaved(subtask, mode)}
       />
-    </div>
+    </>
   );
 }

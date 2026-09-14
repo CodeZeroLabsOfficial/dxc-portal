@@ -7,7 +7,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 
 import type { ProjectSubtask } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -42,59 +41,61 @@ export function ProjectSubtaskItem({
   const done = subtask.status === "done";
 
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} style={style}>
-      <Card
-        className={cn(
-          "cursor-pointer transition-shadow hover:shadow-md",
-          done ? "opacity-70" : ""
-        )}
-        onClick={onClick}>
-        <CardContent className="flex items-start gap-3">
-          <Checkbox
-            checked={done}
-            onCheckedChange={(checked) => onStatusToggle?.(subtask.id, checked === true)}
-            onClick={(e) => e.stopPropagation()}
-          />
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={style}
+      className={cn(
+        "bg-muted flex cursor-pointer items-start justify-between gap-3 rounded-md p-2",
+        done && "opacity-70"
+      )}
+      onClick={onClick}>
+      <div className="flex min-w-0 flex-1 items-start gap-2">
+        <Checkbox
+          checked={done}
+          onCheckedChange={(checked) => onStatusToggle?.(subtask.id, checked === true)}
+          onClick={(e) => e.stopPropagation()}
+        />
 
-          <div className="flex grow flex-col space-y-2">
-            <div className="flex flex-col items-start justify-between space-y-1 lg:flex-row lg:space-y-0">
-              <h3
-                className={cn(
-                  "text-md leading-none font-medium",
-                  done ? "text-muted-foreground line-through" : ""
-                )}>
-                {subtask.title}
-              </h3>
+        <div className="flex min-w-0 grow flex-col space-y-2">
+          <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+            <h3
+              className={cn(
+                "truncate text-sm font-medium",
+                done && "text-muted-foreground line-through"
+              )}>
+              {subtask.title}
+            </h3>
 
-              <div className="flex items-center gap-2">
-                <Badge className={cn("capitalize", subtaskStatusClasses[subtask.status])}>
-                  {subtaskStatusNamed[subtask.status]}
-                </Badge>
-                <Badge variant="secondary" className="tabular-nums">
-                  {subtask.progress}%
-                </Badge>
-              </div>
+            <div className="flex items-center gap-2">
+              <Badge className={cn("capitalize", subtaskStatusClasses[subtask.status])}>
+                {subtaskStatusNamed[subtask.status]}
+              </Badge>
+              <Badge variant="secondary" className="tabular-nums">
+                {subtask.progress}%
+              </Badge>
             </div>
-
-            <div className="flex flex-wrap items-center gap-4">
-              {assigneeName ? (
-                <Badge variant="outline" className="font-normal">
-                  {assigneeName}
-                </Badge>
-              ) : null}
-
-              {subtask.dueDate ? (
-                <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                  <Calendar className="h-3 w-3" />
-                  <span>{format(subtask.dueDate, "MMM d, yyyy")}</span>
-                </div>
-              ) : null}
-            </div>
-
-            <Progress value={subtask.progress} className="h-1.5" />
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="flex flex-wrap items-center gap-4">
+            {assigneeName ? (
+              <Badge variant="outline" className="font-normal">
+                {assigneeName}
+              </Badge>
+            ) : null}
+
+            {subtask.dueDate ? (
+              <div className="text-muted-foreground flex items-center gap-1 text-xs">
+                <Calendar className="h-3 w-3" />
+                <span>{format(subtask.dueDate, "MMM d, yyyy")}</span>
+              </div>
+            ) : null}
+          </div>
+
+          <Progress value={subtask.progress} className="h-1.5" />
+        </div>
+      </div>
     </div>
   );
 }
