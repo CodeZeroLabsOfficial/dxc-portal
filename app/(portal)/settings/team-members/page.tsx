@@ -12,8 +12,7 @@ import { useActiveClient } from "@/hooks/use-active-client";
 import { db } from "@/lib/firebase";
 import {
   type ClientGrant,
-  createInvitedAuthUser,
-  createInvitedProfile,
+  createInvitedMember,
   grantLabel,
   inviteErrorMessage,
   loadClientGrants,
@@ -269,8 +268,7 @@ export default function TeamMembersPage() {
 
     setSaving(true);
     try {
-      const uid = await createInvitedAuthUser(email, password);
-      await createInvitedProfile({ uid, email, role: inviteRole });
+      const uid = await createInvitedMember({ email, password, role: inviteRole });
       await syncClientMemberships({
         userId: uid,
         createdBy: userProfile.uid,

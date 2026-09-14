@@ -1,10 +1,11 @@
 import { deleteApp, initializeApp } from "firebase/app";
-import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword, inMemoryPersistence, initializeAuth } from "firebase/auth";
 import {
   collection,
   deleteDoc,
   doc,
   getDocs,
+  getFirestore,
   serverTimestamp,
   setDoc
 } from "firebase/firestore";
@@ -79,38 +80,35 @@ export async function syncClientMemberships({
   );
 }
 
-export async function createInvitedAuthUser(email: string, password: string): Promise<string> {
+export async function createInvitedMember({
+  email,
+  password,
+  role
+}: {
+  email: string;
+  password: string;
+  role: OrgRole;
+}): Promise<string> {
   const secondary = initializeApp(firebaseApp.options, `invite-${crypto.randomUUID()}`);
+  const secondaryAuth = initializeAuth(secondary, { persistence: inMemoryPersistence });
+  const secondaryDb = getFirestore(secondary);
   try {
-    const secondaryAuth = getAuth(secondary);
     const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
     const uid = credential.user.uid;
-    await signOut(secondaryAuth);
+    await setDoc(doc(secondaryDb, "users", uid), {
+      uid,
+      displayName: email.split("@")[0] || "User",
+      email,
+      photoURL: null,
+      role,
+      language: "en",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
     return uid;
   } finally {
     await deleteApp(secondary);
   }
-}
-
-export async function createInvitedProfile({
-  uid,
-  email,
-  role
-}: {
-  uid: string;
-  email: string;
-  role: OrgRole;
-}) {
-  await setDoc(doc(db, "users", uid), {
-    uid,
-    displayName: email.split("@")[0] || "User",
-    email,
-    photoURL: null,
-    role,
-    language: "en",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
 }
 
 export function inviteErrorMessage(error: unknown): string {
@@ -121,5 +119,10 @@ export function inviteErrorMessage(error: unknown): string {
   if (code === "auth/email-already-in-use") return "An account with this email already exists.";
   if (code === "auth/invalid-email") return "Enter a valid email address.";
   if (code === "auth/weak-password") return "Password is too weak.";
+  if (code === "auth/operation-not-allowed") return "Email/password accounts are disabled.";
+  if (code === "auth/too-many-requests") return "Too many attempts. Try again later.";
+  if (code === "permission-denied" || code === "firestore/permission-denied") {
+    return "You do not have permission to add this member.";
+  }
   return "Could not create member.";
 }
