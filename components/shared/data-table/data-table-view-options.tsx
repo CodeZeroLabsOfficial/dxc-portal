@@ -1,7 +1,7 @@
 "use client";
 
-import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
-import { Table } from "@tanstack/react-table";
+import type { LegacyReactTable } from "@tanstack/react-table/legacy";
+import type { RowData } from "@tanstack/table-core";
 import { Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,15 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-export function DataTableViewOptions<TData>({ table }: { table: Table<TData> }) {
+export function DataTableViewOptions<TData extends RowData>({
+  table
+}: {
+  table: LegacyReactTable<TData>;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

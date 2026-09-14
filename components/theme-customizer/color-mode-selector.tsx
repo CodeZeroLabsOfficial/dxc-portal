@@ -9,7 +9,7 @@ export function ColorModeSelector() {
 
   return (
     <div className="flex flex-col gap-3">
-      <Label htmlFor="roundedCorner">Color mode:</Label>
+      <Label htmlFor="roundedCorner">Color schema:</Label>
       <ToggleGroup
         className="w-full"
         value={theme}

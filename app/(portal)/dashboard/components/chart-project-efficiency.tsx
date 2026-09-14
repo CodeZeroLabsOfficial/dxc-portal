@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Label, Pie, PieChart, Sector } from "recharts";
-import { PieSectorDataItem } from "recharts/types/polar/Pie";
+import type { PieSectorDataItem } from "recharts/types/polar/Pie";
 
 import {
   Card,
@@ -129,17 +129,23 @@ export function ChartProjectEfficiency() {
               nameKey="month"
               innerRadius={45}
               strokeWidth={5}
-              activeIndex={activeIndex}
-              activeShape={({ outerRadius = 0, ...props }: PieSectorDataItem) => (
-                <g>
-                  <Sector {...props} outerRadius={outerRadius + 5} />
-                  <Sector
-                    {...props}
-                    outerRadius={outerRadius + 20}
-                    innerRadius={outerRadius + 12}
-                  />
-                </g>
-              )}>
+              activeShape={(props: PieSectorDataItem) => {
+                const outerRadius = props.outerRadius ?? 0;
+                const isActive = props.payload?.month === activeMonth;
+                if (!isActive) {
+                  return <Sector {...props} />;
+                }
+                return (
+                  <g>
+                    <Sector {...props} outerRadius={outerRadius + 5} />
+                    <Sector
+                      {...props}
+                      outerRadius={outerRadius + 20}
+                      innerRadius={outerRadius + 12}
+                    />
+                  </g>
+                );
+              }}>
               <Label
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {

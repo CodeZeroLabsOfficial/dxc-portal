@@ -12,7 +12,7 @@ import {
   updateDoc
 } from "firebase/firestore";
 import { toast } from "sonner";
-import { ColumnDef } from "@tanstack/react-table";
+import type { LegacyColumnDef } from "@tanstack/react-table/legacy";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -177,7 +177,7 @@ export default function TeamMembersPage() {
     }
   }
 
-  const columns = useMemo<ColumnDef<UserProfile>[]>(
+  const columns = useMemo<LegacyColumnDef<UserProfile>[]>(
     () => [
       {
         accessorKey: "displayName",

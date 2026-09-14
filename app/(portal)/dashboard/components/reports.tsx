@@ -1,18 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { flexRender } from "@tanstack/react-table";
+import type { ColumnFiltersState, ColumnVisibilityState, SortingState } from "@tanstack/table-core";
 import {
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-  type VisibilityState,
-  flexRender,
+  type LegacyColumnDef,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable
-} from "@tanstack/react-table";
+  useLegacyTable
+} from "@tanstack/react-table/legacy";
 import { ArrowUpDown, ChevronDown, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -294,7 +292,7 @@ const data: Project[] = [
 ];
 
 // Define the columns for our table
-const columns: ColumnDef<Project>[] = [
+const columns: LegacyColumnDef<Project>[] = [
   {
     accessorKey: "id",
     header: "ID",
@@ -405,11 +403,11 @@ const columns: ColumnDef<Project>[] = [
 export function Reports() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
 
-  const table = useReactTable({
+  const table = useLegacyTable({
     data,
     columns,
     onSortingChange: setSorting,
@@ -430,6 +428,7 @@ export function Reports() {
     },
     initialState: {
       pagination: {
+        pageIndex: 0,
         pageSize: 15
       }
     }

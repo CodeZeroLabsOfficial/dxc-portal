@@ -765,45 +765,399 @@ body {
 /* Theme presets */
 
 
+/* Theme colors */
+[data-theme-color="red"] {
+    --primary: var(--color-red-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-red-600);
+    --sidebar-primary: var(--color-red-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-red-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-red-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="orange"] {
+    --primary: var(--color-orange-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-orange-600);
+    --sidebar-primary: var(--color-orange-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-orange-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-orange-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="amber"] {
+    --primary: var(--color-amber-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-amber-600);
+    --sidebar-primary: var(--color-amber-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-amber-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-amber-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="yellow"] {
+    --primary: var(--color-yellow-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-yellow-600);
+    --sidebar-primary: var(--color-yellow-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-yellow-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-yellow-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="lime"] {
+    --primary: var(--color-lime-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-lime-600);
+    --sidebar-primary: var(--color-lime-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-lime-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-lime-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="green"] {
+    --primary: var(--color-green-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-green-600);
+    --sidebar-primary: var(--color-green-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-green-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-green-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="emerald"] {
+    --primary: var(--color-emerald-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-emerald-600);
+    --sidebar-primary: var(--color-emerald-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-emerald-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-emerald-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="teal"] {
+    --primary: var(--color-teal-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-teal-600);
+    --sidebar-primary: var(--color-teal-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-teal-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-teal-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="cyan"] {
+    --primary: var(--color-cyan-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-cyan-600);
+    --sidebar-primary: var(--color-cyan-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-cyan-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-cyan-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="sky"] {
+    --primary: var(--color-sky-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-sky-600);
+    --sidebar-primary: var(--color-sky-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-sky-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-sky-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="blue"] {
+    --primary: var(--color-blue-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-blue-600);
+    --sidebar-primary: var(--color-blue-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-blue-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-blue-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="indigo"] {
+    --primary: var(--color-indigo-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-indigo-600);
+    --sidebar-primary: var(--color-indigo-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-indigo-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-indigo-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="violet"] {
+    --primary: var(--color-violet-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-violet-600);
+    --sidebar-primary: var(--color-violet-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-violet-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-violet-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="purple"] {
+    --primary: var(--color-purple-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-purple-600);
+    --sidebar-primary: var(--color-purple-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-purple-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-purple-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="fuchsia"] {
+    --primary: var(--color-fuchsia-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-fuchsia-600);
+    --sidebar-primary: var(--color-fuchsia-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-fuchsia-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-fuchsia-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="pink"] {
+    --primary: var(--color-pink-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-pink-600);
+    --sidebar-primary: var(--color-pink-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-pink-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-pink-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+
+[data-theme-color="rose"] {
+    --primary: var(--color-rose-600);
+    --primary-foreground: var(--color-white);
+    --ring: var(--color-rose-600);
+    --sidebar-primary: var(--color-rose-600);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: color-mix(in oklab, var(--color-rose-600) 15%, transparent);
+    --sidebar-accent-foreground: var(--color-black);
+    --sidebar-ring: var(--color-rose-600);
+
+    @variant dark {
+        --sidebar-accent-foreground: var(--color-white);
+    }
+}
+/* Theme colors */
+
+
 /* Chart presets */
-[data-theme-chart-preset="cyan"] {
-    --chart-1: var(--color-cyan-800);
-    --chart-2: var(--color-cyan-700);
-    --chart-3: var(--color-cyan-600);
-    --chart-4: var(--color-cyan-500);
-    --chart-5: var(--color-cyan-400);
+[data-theme-chart-preset="red"] {
+    --chart-1: var(--color-red-600);
+    --chart-2: var(--color-red-500);
+    --chart-3: var(--color-red-400);
+    --chart-4: var(--color-red-300);
+    --chart-5: var(--color-red-200);
+}
+
+[data-theme-chart-preset="orange"] {
+    --chart-1: var(--color-orange-600);
+    --chart-2: var(--color-orange-500);
+    --chart-3: var(--color-orange-400);
+    --chart-4: var(--color-orange-300);
+    --chart-5: var(--color-orange-200);
 }
 
 [data-theme-chart-preset="amber"] {
-    --chart-1: var(--color-amber-800);
-    --chart-2: var(--color-amber-700);
-    --chart-3: var(--color-amber-600);
-    --chart-4: var(--color-amber-500);
-    --chart-5: var(--color-amber-400);
+    --chart-1: var(--color-amber-600);
+    --chart-2: var(--color-amber-500);
+    --chart-3: var(--color-amber-400);
+    --chart-4: var(--color-amber-300);
+    --chart-5: var(--color-amber-200);
+}
+
+[data-theme-chart-preset="yellow"] {
+    --chart-1: var(--color-yellow-600);
+    --chart-2: var(--color-yellow-500);
+    --chart-3: var(--color-yellow-400);
+    --chart-4: var(--color-yellow-300);
+    --chart-5: var(--color-yellow-200);
+}
+
+[data-theme-chart-preset="lime"] {
+    --chart-1: var(--color-lime-600);
+    --chart-2: var(--color-lime-500);
+    --chart-3: var(--color-lime-400);
+    --chart-4: var(--color-lime-300);
+    --chart-5: var(--color-lime-200);
 }
 
 [data-theme-chart-preset="green"] {
-    --chart-1: var(--color-green-800);
-    --chart-2: var(--color-green-700);
-    --chart-3: var(--color-green-600);
-    --chart-4: var(--color-green-500);
-    --chart-5: var(--color-green-400);
+    --chart-1: var(--color-green-600);
+    --chart-2: var(--color-green-500);
+    --chart-3: var(--color-green-400);
+    --chart-4: var(--color-green-300);
+    --chart-5: var(--color-green-200);
+}
+
+[data-theme-chart-preset="emerald"] {
+    --chart-1: var(--color-emerald-600);
+    --chart-2: var(--color-emerald-500);
+    --chart-3: var(--color-emerald-400);
+    --chart-4: var(--color-emerald-300);
+    --chart-5: var(--color-emerald-200);
+}
+
+[data-theme-chart-preset="teal"] {
+    --chart-1: var(--color-teal-600);
+    --chart-2: var(--color-teal-500);
+    --chart-3: var(--color-teal-400);
+    --chart-4: var(--color-teal-300);
+    --chart-5: var(--color-teal-200);
+}
+
+[data-theme-chart-preset="cyan"] {
+    --chart-1: var(--color-cyan-600);
+    --chart-2: var(--color-cyan-500);
+    --chart-3: var(--color-cyan-400);
+    --chart-4: var(--color-cyan-300);
+    --chart-5: var(--color-cyan-200);
+}
+
+[data-theme-chart-preset="sky"] {
+    --chart-1: var(--color-sky-600);
+    --chart-2: var(--color-sky-500);
+    --chart-3: var(--color-sky-400);
+    --chart-4: var(--color-sky-300);
+    --chart-5: var(--color-sky-200);
+}
+
+[data-theme-chart-preset="blue"] {
+    --chart-1: var(--color-blue-600);
+    --chart-2: var(--color-blue-500);
+    --chart-3: var(--color-blue-400);
+    --chart-4: var(--color-blue-300);
+    --chart-5: var(--color-blue-200);
 }
 
 [data-theme-chart-preset="indigo"] {
-    --chart-1: var(--color-indigo-800);
-    --chart-2: var(--color-indigo-700);
-    --chart-3: var(--color-indigo-600);
-    --chart-4: var(--color-indigo-500);
-    --chart-5: var(--color-indigo-400);
+    --chart-1: var(--color-indigo-600);
+    --chart-2: var(--color-indigo-500);
+    --chart-3: var(--color-indigo-400);
+    --chart-4: var(--color-indigo-300);
+    --chart-5: var(--color-indigo-200);
+}
+
+[data-theme-chart-preset="violet"] {
+    --chart-1: var(--color-violet-600);
+    --chart-2: var(--color-violet-500);
+    --chart-3: var(--color-violet-400);
+    --chart-4: var(--color-violet-300);
+    --chart-5: var(--color-violet-200);
+}
+
+[data-theme-chart-preset="purple"] {
+    --chart-1: var(--color-purple-600);
+    --chart-2: var(--color-purple-500);
+    --chart-3: var(--color-purple-400);
+    --chart-4: var(--color-purple-300);
+    --chart-5: var(--color-purple-200);
 }
 
 [data-theme-chart-preset="fuchsia"] {
-    --chart-1: var(--color-fuchsia-800);
-    --chart-2: var(--color-fuchsia-700);
-    --chart-3: var(--color-fuchsia-600);
-    --chart-4: var(--color-fuchsia-500);
-    --chart-5: var(--color-fuchsia-400);
+    --chart-1: var(--color-fuchsia-600);
+    --chart-2: var(--color-fuchsia-500);
+    --chart-3: var(--color-fuchsia-400);
+    --chart-4: var(--color-fuchsia-300);
+    --chart-5: var(--color-fuchsia-200);
+}
+
+[data-theme-chart-preset="pink"] {
+    --chart-1: var(--color-pink-600);
+    --chart-2: var(--color-pink-500);
+    --chart-3: var(--color-pink-400);
+    --chart-4: var(--color-pink-300);
+    --chart-5: var(--color-pink-200);
+}
+
+[data-theme-chart-preset="rose"] {
+    --chart-1: var(--color-rose-600);
+    --chart-2: var(--color-rose-500);
+    --chart-3: var(--color-rose-400);
+    --chart-4: var(--color-rose-300);
+    --chart-5: var(--color-rose-200);
 }
 /* Chart presets */
 
@@ -829,9 +1183,6 @@ body {
     --radius: 1.5rem;
 }
 
-[data-theme-radius="none"] {
-    --radius: 0rem;
-}
 /* Radius */
 
 
@@ -878,3 +1229,33 @@ body {
     letter-spacing: -.05em;
 }
 /* Font */
+
+/* Display font */
+[data-theme-display-font="geist"] {
+    --display-family: var(--font-geist);
+}
+
+[data-theme-display-font="montserrat"] {
+    --display-family: var(--font-montserrat);
+}
+
+[data-theme-display-font="poppins"] {
+    --display-family: var(--font-poppins);
+}
+
+[data-theme-display-font="plus-jakarta-sans"] {
+    --display-family: var(--font-plus-jakarta-sans);
+}
+
+[data-theme-display-font="outfit"] {
+    --display-family: var(--font-outfit);
+}
+
+[data-theme-display-font="kumbh-sans"] {
+    --display-family: var(--font-kumbh-sans);
+}
+
+[data-theme-display-font="hedvig-letters-serif"] {
+    --display-family: var(--font-hedvig-letters-serif);
+}
+/* Display font */

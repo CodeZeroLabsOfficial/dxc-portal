@@ -1,6 +1,7 @@
 "use client";
 
-import { Row } from "@tanstack/react-table";
+import type { LegacyRow } from "@tanstack/react-table/legacy";
+import type { RowData } from "@tanstack/table-core";
 import { MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,13 +13,13 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-interface DataTableRowActionsProps<TData> {
-  row: Row<TData>;
+interface DataTableRowActionsProps<TData extends RowData> {
+  row: LegacyRow<TData>;
   onEdit?: (row: TData) => void;
   onDelete?: (row: TData) => void;
 }
 
-export function DataTableRowActions<TData>({
+export function DataTableRowActions<TData extends RowData>({
   row,
   onEdit,
   onDelete

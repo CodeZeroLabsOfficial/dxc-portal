@@ -1,11 +1,74 @@
 export const DEFAULT_THEME = {
   preset: "default",
+  color: "default",
+  chartPreset: "default",
   radius: "default",
   scale: "none",
-  contentLayout: "full"
+  contentLayout: "full",
+  sidebarVariant: "inset",
+  sidebarCollapsible: "icon",
+  font: "default",
+  displayFont: "default"
 } as const;
 
-export type ThemeType = typeof DEFAULT_THEME;
+export const SIDEBAR_VARIANTS = ["inset", "sidebar", "floating"] as const;
+
+export type SidebarVariant = (typeof SIDEBAR_VARIANTS)[number];
+
+export type SidebarCollapsible = "icon" | "offcanvas";
+
+// Values map to the [data-theme-font] blocks in themes.css and the
+// --font-* variables loaded in lib/fonts.ts.
+export const THEME_FONTS = [
+  { name: "Inter", value: "inter" },
+  { name: "Roboto", value: "roboto" },
+  { name: "Poppins", value: "poppins" },
+  { name: "Montserrat", value: "montserrat" },
+  { name: "PT Sans", value: "pt-sans" },
+  { name: "Overpass Mono", value: "overpass-mono" }
+];
+
+// Values map to the [data-theme-display-font] blocks in themes.css.
+// Applied to headings and stats via the .font-display utility.
+export const THEME_DISPLAY_FONTS = [
+  { name: "Geist", value: "geist" },
+  { name: "Montserrat", value: "montserrat" },
+  { name: "Poppins", value: "poppins" },
+  { name: "Plus Jakarta Sans", value: "plus-jakarta-sans" },
+  { name: "Outfit", value: "outfit" },
+  { name: "Kumbh Sans", value: "kumbh-sans" },
+  { name: "Hedvig Letters Serif", value: "hedvig-letters-serif" }
+];
+
+export type ThemeType = {
+  [K in keyof typeof DEFAULT_THEME]: string;
+};
+
+// Predefined colors based on the standard Tailwind palette.
+// The 600 shade is used as the accent color.
+export const THEME_COLORS = [
+  { name: "Red", value: "red" },
+  { name: "Orange", value: "orange" },
+  { name: "Amber", value: "amber" },
+  { name: "Yellow", value: "yellow" },
+  { name: "Lime", value: "lime" },
+  { name: "Green", value: "green" },
+  { name: "Emerald", value: "emerald" },
+  { name: "Teal", value: "teal" },
+  { name: "Cyan", value: "cyan" },
+  { name: "Sky", value: "sky" },
+  { name: "Blue", value: "blue" },
+  { name: "Indigo", value: "indigo" },
+  { name: "Violet", value: "violet" },
+  { name: "Purple", value: "purple" },
+  { name: "Fuchsia", value: "fuchsia" },
+  { name: "Pink", value: "pink" },
+  { name: "Rose", value: "rose" }
+];
+
+// Shades used to build the 5 chart colors from the selected color.
+// Example: indigo -> indigo-600, indigo-500, indigo-400, indigo-300, indigo-200
+export const CHART_COLOR_SHADES = [600, 500, 400, 300, 200];
 
 export const THEMES = [
   {

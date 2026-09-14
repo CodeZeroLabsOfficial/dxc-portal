@@ -34,7 +34,7 @@ export default async function PortalLayout({
                   "calc(100vh - var(--header-height) - (var(--content-padding) * 2) - (var(--content-margin) * 2))"
               } as React.CSSProperties
             }>
-            <AppSidebar variant="inset" />
+            <AppSidebar />
             <SidebarInset>
               <SiteHeader />
               <div className="bg-muted/40 flex flex-1 flex-col">

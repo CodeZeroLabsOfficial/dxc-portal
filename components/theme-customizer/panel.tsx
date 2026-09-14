@@ -3,44 +3,61 @@
 import { Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger
+} from "@/components/ui/drawer";
 import {
-  PresetSelector,
-  SidebarModeSelector,
+  ThemeColorSelector,
+  ChartPresetSelector,
+  FontSelector,
+  DisplayFontSelector,
+  SidebarCollapseSelector,
+  SidebarVariantSelector,
   ThemeScaleSelector,
   ColorModeSelector,
   ContentLayoutSelector,
   ThemeRadiusSelector,
-  ResetThemeButton
+  ResetThemeButton,
+  RandomThemeButton
 } from "@/components/theme-customizer/index";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export function ThemeCustomizerPanel() {
-  const isMobile = useIsMobile();
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Drawer direction="right">
+      <DrawerTrigger asChild>
         <Button size="icon-sm" variant="ghost">
           <Palette />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="me-4 w-80 p-4 shadow-xl lg:me-0"
-        align={isMobile ? "center" : "end"}>
-        <div className="grid space-y-4">
-          <PresetSelector />
+      </DrawerTrigger>
+      <DrawerContent className="w-80" overlay={false}>
+        <DrawerHeader>
+          <DrawerTitle>Customize</DrawerTitle>
+          <DrawerDescription>Adjust the look and feel of the dashboard.</DrawerDescription>
+        </DrawerHeader>
+        <div className="grid space-y-4 overflow-y-auto px-4">
+          <ThemeColorSelector />
+          <ChartPresetSelector />
+          <FontSelector />
+          <DisplayFontSelector />
           <ThemeScaleSelector />
           <ThemeRadiusSelector />
           <ColorModeSelector />
           <ContentLayoutSelector />
-          <SidebarModeSelector />
+          <SidebarCollapseSelector />
+          <SidebarVariantSelector />
         </div>
-        <ResetThemeButton />
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <DrawerFooter>
+          <div className="mt-4 flex gap-2">
+            <RandomThemeButton />
+            <ResetThemeButton />
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

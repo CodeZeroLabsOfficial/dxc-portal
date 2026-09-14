@@ -307,7 +307,7 @@ export function ProjectSubtaskSheet({
                         mode="single"
                         selected={field.value ?? undefined}
                         onSelect={(date) => field.onChange(date ?? null)}
-                        initialFocus
+                        autoFocus
                       />
                     </PopoverContent>
                   </Popover>

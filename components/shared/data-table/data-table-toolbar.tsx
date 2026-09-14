@@ -1,6 +1,7 @@
 "use client";
 
-import { Table } from "@tanstack/react-table";
+import type { LegacyReactTable } from "@tanstack/react-table/legacy";
+import type { RowData } from "@tanstack/table-core";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 
-interface DataTableToolbarProps<TData> {
-  table: Table<TData>;
+interface DataTableToolbarProps<TData extends RowData> {
+  table: LegacyReactTable<TData>;
   searchKey?: string;
   searchPlaceholder?: string;
   filters?: {
@@ -19,7 +20,7 @@ interface DataTableToolbarProps<TData> {
   }[];
 }
 
-export function DataTableToolbar<TData>({
+export function DataTableToolbar<TData extends RowData>({
   table,
   searchKey = "title",
   searchPlaceholder = "Filter...",
