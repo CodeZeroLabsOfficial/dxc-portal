@@ -12,8 +12,6 @@ import {
   updateDoc
 } from "firebase/firestore";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
-
 import { db } from "@/lib/firebase";
 import { appendProjectActivity } from "@/lib/project-activity";
 import { averageProgress, mapProjectDoc, toProjectDate } from "@/lib/projects";
@@ -23,6 +21,13 @@ import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask, UserProfile } 
 import { PageBackButton } from "@/components/shared/page-back-button";
 import { PageContent } from "@/components/shared/page-content";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -216,16 +221,12 @@ export default function ProjectDetailPage() {
 
   return (
     <PageContent>
-      <div className="flex items-center justify-between">
-        <PageBackButton href="/projects" label="Projects" />
-        <Button size="sm" onClick={() => setEditOpen(true)}>
-          <Pencil />
-          Edit
-        </Button>
-      </div>
-
       <Tabs value={tab} onValueChange={setTab} className="gap-4">
-        <ProjectDetailCard project={project} logoURL={activeClient?.logoURL} />
+        <ProjectDetailCard
+          project={project}
+          logoURL={activeClient?.logoURL}
+          onEdit={() => setEditOpen(true)}
+        />
 
         <TabsContent value="overview" className="space-y-4">
           <ProjectOverviewPanel
@@ -275,18 +276,33 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="finance" className="space-y-4">
-          <p className="text-muted-foreground text-sm">Allocated and spent in AUD</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Allocated</Label>
-              <Input value={allocated} onChange={(e) => setAllocated(e.target.value)} type="number" />
-            </div>
-            <div className="space-y-2">
-              <Label>Spent</Label>
-              <Input value={spent} onChange={(e) => setSpent(e.target.value)} type="number" />
-            </div>
-          </div>
-          <Button onClick={() => void saveFinance()}>Save financials</Button>
+          <Card className="border-border/80 flex min-h-80 flex-col bg-card/60">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Financials</CardTitle>
+              <CardAction>
+                <Button size="sm" className="gap-1.5 shadow-sm" onClick={() => void saveFinance()}>
+                  Save
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col space-y-4 pt-0">
+              <p className="text-muted-foreground text-sm">Allocated and spent in AUD</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Allocated</Label>
+                  <Input
+                    value={allocated}
+                    onChange={(e) => setAllocated(e.target.value)}
+                    type="number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Spent</Label>
+                  <Input value={spent} onChange={(e) => setSpent(e.target.value)} type="number" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

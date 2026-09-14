@@ -1,7 +1,11 @@
+import Link from "next/link";
+import { ChevronLeft, Pencil } from "lucide-react";
+
 import { formatProjectDate, projectStatusNamed } from "@/lib/projects";
 import { cn, getInitials } from "@/lib/utils";
 import type { Project } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { priorityClasses, statusClasses } from "../../enum";
@@ -9,7 +13,11 @@ import { priorityClasses, statusClasses } from "../../enum";
 type ProjectDetailCardProps = {
   project: Project;
   logoURL?: string | null;
+  onEdit?: () => void;
 };
+
+const headerActionClass =
+  "absolute top-3 opacity-0 transition-opacity group-hover/header:opacity-100 focus-visible:opacity-100 max-md:opacity-100";
 
 function MetaField({
   label,
@@ -38,13 +46,30 @@ function MetaField({
 const tabTriggerClass =
   "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-4 shadow-none!";
 
-export function ProjectDetailCard({ project, logoURL }: ProjectDetailCardProps) {
+export function ProjectDetailCard({ project, logoURL, onEdit }: ProjectDetailCardProps) {
   const statusLabel = projectStatusNamed[project.status] ?? project.status;
   const initials = getInitials(project.name).slice(0, 2) || "P";
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-card/60 shadow-sm backdrop-blur-sm">
-      <div className="border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/20 px-4 py-5 sm:px-6 md:px-8 md:py-6">
+      <div className="group/header relative border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/20 px-4 pt-10 pb-5 sm:px-6 md:px-8 md:pt-12 md:pb-6">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className={cn(headerActionClass, "left-3")}
+          asChild>
+          <Link href="/projects" aria-label="Projects">
+            <ChevronLeft />
+          </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className={cn(headerActionClass, "right-3")}
+          onClick={onEdit}
+          aria-label="Edit">
+          <Pencil />
+        </Button>
         <div className="flex gap-4">
           <div className="bg-primary/10 text-primary hidden size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:flex">
             {logoURL ? (
