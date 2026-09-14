@@ -4,6 +4,7 @@ export type ClientStatus = "active" | "inactive";
 
 export type UserPreferences = {
   theme?: "light" | "dark" | "system";
+  color?: string;
   notifications?: {
     serviceRequestUpdates?: boolean;
     projectUpdates?: boolean;

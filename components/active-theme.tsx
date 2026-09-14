@@ -1,7 +1,14 @@
 "use client";
 
 import { ReactNode, createContext, useContext, useEffect, useState } from "react";
-import { DEFAULT_THEME, ThemeType } from "@/lib/themes";
+import {
+  DEFAULT_THEME,
+  THEME_COLOR_COOKIE,
+  THEME_COLOR_STORAGE_KEY,
+  ThemeType,
+  isThemeColor,
+  themeColorCssVars
+} from "@/lib/themes";
 
 function setThemeCookie(key: string, value: string | null) {
   if (typeof window === "undefined") return;
@@ -11,6 +18,58 @@ function setThemeCookie(key: string, value: string | null) {
   } else {
     document.cookie = `${key}=${value}; path=/; max-age=31536000; SameSite=Lax; ${window.location.protocol === "https:" ? "Secure;" : ""}`;
   }
+}
+
+function persistThemeColor(color: string) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(THEME_COLOR_STORAGE_KEY, color);
+
+  if (color !== "default") {
+    setThemeCookie(THEME_COLOR_COOKIE, color);
+  } else {
+    setThemeCookie(THEME_COLOR_COOKIE, null);
+  }
+}
+
+function applyThemeColor(color: string) {
+  if (typeof document === "undefined") return;
+
+  const root = document.documentElement;
+  const body = document.body;
+  const vars = themeColorCssVars(color);
+  const tokenNames = [
+    "--primary",
+    "--primary-foreground",
+    "--ring",
+    "--sidebar-primary",
+    "--sidebar-primary-foreground",
+    "--sidebar-accent",
+    "--sidebar-ring"
+  ] as const;
+
+  if (color !== "default") {
+    root.setAttribute("data-theme-color", color);
+    body.setAttribute("data-theme-color", color);
+    if (vars) {
+      for (const [token, value] of Object.entries(vars)) {
+        root.style.setProperty(token, value);
+      }
+    }
+    return;
+  }
+
+  root.removeAttribute("data-theme-color");
+  body.removeAttribute("data-theme-color");
+  for (const token of tokenNames) {
+    root.style.removeProperty(token);
+  }
+}
+
+function readStoredThemeColor(): string | null {
+  if (typeof window === "undefined") return null;
+  const stored = window.localStorage.getItem(THEME_COLOR_STORAGE_KEY);
+  return isThemeColor(stored) ? stored : null;
 }
 
 type ThemeContextType = {
@@ -27,9 +86,14 @@ export function ActiveThemeProvider({
   children: ReactNode;
   initialTheme?: ThemeType;
 }) {
-  const [theme, setTheme] = useState<ThemeType>(() =>
-    initialTheme ? initialTheme : DEFAULT_THEME
-  );
+  const [theme, setTheme] = useState<ThemeType>(() => {
+    const base = initialTheme ?? DEFAULT_THEME;
+    const stored = readStoredThemeColor();
+    if (stored && stored !== "default" && base.color === "default") {
+      return { ...base, color: stored };
+    }
+    return base;
+  });
 
   useEffect(() => {
     const body = document.body;
@@ -50,13 +114,8 @@ export function ActiveThemeProvider({
       body.removeAttribute("data-theme-preset");
     }
 
-    if (theme.color != "default") {
-      setThemeCookie("theme_color", theme.color);
-      body.setAttribute("data-theme-color", theme.color);
-    } else {
-      setThemeCookie("theme_color", null);
-      body.removeAttribute("data-theme-color");
-    }
+    persistThemeColor(theme.color);
+    applyThemeColor(theme.color);
 
     if (theme.font != "default") {
       setThemeCookie("theme_font", theme.font);

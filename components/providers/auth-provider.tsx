@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from "react";
 import {
@@ -20,7 +21,10 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
+import { useThemeConfig } from "@/components/active-theme";
 import { auth, db } from "@/lib/firebase";
+import { isThemeColor } from "@/lib/themes";
+import { updateUserPreferences } from "@/lib/user-profile";
 import type { UserProfile } from "@/types";
 
 type AuthContextValue = {
@@ -35,6 +39,54 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function ThemeColorPreferenceSync() {
+  const { user, userProfile } = useAuth();
+  const { theme, setTheme } = useThemeConfig();
+  const appliedUid = useRef<string | null>(null);
+  const lastWrittenColor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!userProfile?.uid) {
+      appliedUid.current = null;
+      lastWrittenColor.current = null;
+      return;
+    }
+
+    if (appliedUid.current === userProfile.uid) return;
+    appliedUid.current = userProfile.uid;
+
+    const profileColor = userProfile.preferences?.color;
+    if (!isThemeColor(profileColor) || profileColor === theme.color) {
+      lastWrittenColor.current = theme.color;
+      return;
+    }
+
+    lastWrittenColor.current = profileColor;
+    setTheme({ ...theme, color: profileColor });
+  }, [setTheme, theme, userProfile]);
+
+  useEffect(() => {
+    if (!user || !userProfile) return;
+    if (appliedUid.current !== user.uid) return;
+    if (lastWrittenColor.current === theme.color) return;
+    if ((userProfile.preferences?.color ?? "default") === theme.color) {
+      lastWrittenColor.current = theme.color;
+      return;
+    }
+
+    lastWrittenColor.current = theme.color;
+    void updateUserPreferences(user.uid, {
+      ...userProfile.preferences,
+      color: theme.color
+    }).catch((error) => {
+      console.error("Failed to save theme color preference", error);
+      lastWrittenColor.current = null;
+    });
+  }, [theme.color, user, userProfile]);
+
+  return null;
+}
 
 async function upsertUserProfile(user: User): Promise<UserProfile> {
   const ref = doc(db, "users", user.uid);
@@ -173,7 +225,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, userProfile, loading, signIn, signUp, resetPassword, signOut, refreshProfile]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      <ThemeColorPreferenceSync />
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

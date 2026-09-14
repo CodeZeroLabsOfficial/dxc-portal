@@ -9,7 +9,7 @@ import { DM_Sans } from "next/font/google";
 import "./globals.css";
 
 import { ActiveThemeProvider } from "@/components/active-theme";
-import { DEFAULT_THEME } from "@/lib/themes";
+import { DEFAULT_THEME, themeColorCssVars } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -47,12 +47,29 @@ export default async function RootLayout({
 
   const bodyAttributes = Object.fromEntries(
     Object.entries(themeSettings)
-      .filter(([_, value]) => value)
+      .filter(([key, value]) => {
+        if (!value) return false;
+        const fallback = DEFAULT_THEME[key as keyof typeof DEFAULT_THEME];
+        return value !== fallback;
+      })
       .map(([key, value]) => [`data-theme-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`, value])
   );
 
+  const themeColor = themeSettings.color;
+  const htmlColorAttributes =
+    themeColor !== DEFAULT_THEME.color
+      ? {
+          "data-theme-color": themeColor,
+          style: themeColorCssVars(themeColor) as React.CSSProperties
+        }
+      : {};
+
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", dmSans.variable)}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("font-sans", dmSans.variable)}
+      {...htmlColorAttributes}>
       <body
         suppressHydrationWarning
         className={cn("bg-background group/layout font-sans", fontVariables)}

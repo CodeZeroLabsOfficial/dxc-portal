@@ -66,6 +66,26 @@ export const THEME_COLORS = [
   { name: "Rose", value: "rose" }
 ];
 
+export const THEME_COLOR_COOKIE = "theme_color";
+export const THEME_COLOR_STORAGE_KEY = "theme_color";
+
+export function isThemeColor(value: string | null | undefined): value is string {
+  return value === "default" || THEME_COLORS.some((color) => color.value === value);
+}
+
+export function themeColorCssVars(color: string): Record<string, string> | undefined {
+  if (!color || color === "default") return undefined;
+  return {
+    "--primary": `var(--color-${color}-600)`,
+    "--primary-foreground": "var(--color-white)",
+    "--ring": `var(--color-${color}-600)`,
+    "--sidebar-primary": `var(--color-${color}-600)`,
+    "--sidebar-primary-foreground": "var(--color-white)",
+    "--sidebar-accent": `color-mix(in oklab, var(--color-${color}-600) 15%, transparent)`,
+    "--sidebar-ring": `var(--color-${color}-600)`
+  };
+}
+
 // Shades used to build the 5 chart colors from the selected color.
 // Example: indigo -> indigo-600, indigo-500, indigo-400, indigo-300, indigo-200
 export const CHART_COLOR_SHADES = [600, 500, 400, 300, 200];
