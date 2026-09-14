@@ -169,21 +169,26 @@ function ChecklistCard({
   );
 }
 
-type ProjectRisksIssuesPanelProps = {
+type ProjectRisksPanelProps = {
   projectId: string;
   risks: ProjectRisk[];
+  actorId?: string | null;
+  actorName?: string | null;
+};
+
+type ProjectIssuesPanelProps = {
+  projectId: string;
   issues: ProjectIssue[];
   actorId?: string | null;
   actorName?: string | null;
 };
 
-export function ProjectRisksIssuesPanel({
+export function ProjectRisksPanel({
   projectId,
   risks,
-  issues,
   actorId = null,
   actorName = null
-}: ProjectRisksIssuesPanelProps) {
+}: ProjectRisksPanelProps) {
   async function addRisk(title: string) {
     await addDoc(collection(db, "projects", projectId, "risks"), {
       title,
@@ -215,6 +220,31 @@ export function ProjectRisksIssuesPanel({
     toast.success("Risk removed");
   }
 
+  return (
+    <ChecklistCard
+      title="Risks"
+      placeholder="Enter risk title"
+      emptyIcon={AlertTriangle}
+      emptyPrimary="No risks found"
+      emptySecondary="Add a risk to get started."
+      items={risks.map((item) => ({
+        id: item.id,
+        title: item.title,
+        done: item.status === "closed"
+      }))}
+      onAdd={addRisk}
+      onToggle={toggleRisk}
+      onRemove={removeRisk}
+    />
+  );
+}
+
+export function ProjectIssuesPanel({
+  projectId,
+  issues,
+  actorId = null,
+  actorName = null
+}: ProjectIssuesPanelProps) {
   async function addIssue(title: string) {
     await addDoc(collection(db, "projects", projectId, "issues"), {
       title,
@@ -247,37 +277,20 @@ export function ProjectRisksIssuesPanel({
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <ChecklistCard
-        title="Risks"
-        placeholder="Enter risk title"
-        emptyIcon={AlertTriangle}
-        emptyPrimary="No risks found"
-        emptySecondary="Add a risk to get started."
-        items={risks.map((item) => ({
-          id: item.id,
-          title: item.title,
-          done: item.status === "closed"
-        }))}
-        onAdd={addRisk}
-        onToggle={toggleRisk}
-        onRemove={removeRisk}
-      />
-      <ChecklistCard
-        title="Issues"
-        placeholder="Enter issue title"
-        emptyIcon={CircleAlert}
-        emptyPrimary="No issues found"
-        emptySecondary="Add an issue to get started."
-        items={issues.map((item) => ({
-          id: item.id,
-          title: item.title,
-          done: item.status === "resolved" || item.status === "closed"
-        }))}
-        onAdd={addIssue}
-        onToggle={toggleIssue}
-        onRemove={removeIssue}
-      />
-    </div>
+    <ChecklistCard
+      title="Issues"
+      placeholder="Enter issue title"
+      emptyIcon={CircleAlert}
+      emptyPrimary="No issues found"
+      emptySecondary="Add an issue to get started."
+      items={issues.map((item) => ({
+        id: item.id,
+        title: item.title,
+        done: item.status === "resolved" || item.status === "closed"
+      }))}
+      onAdd={addIssue}
+      onToggle={toggleIssue}
+      onRemove={removeIssue}
+    />
   );
 }

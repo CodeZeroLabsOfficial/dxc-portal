@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { appendProjectActivity } from "@/lib/project-activity";
 import { cn } from "@/lib/utils";
-import type { Project, UserProfile } from "@/types";
+import type { Project, ProjectGoal, UserProfile } from "@/types";
 import {
   EnumProjectPriority,
   EnumProjectStatus,
@@ -24,6 +24,8 @@ import { projectFormSchema, type ProjectFormValues } from "../../schemas";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import {
   Select,
@@ -68,6 +70,9 @@ export function ProjectEditSheet({
   const actorName = userProfile?.displayName ?? user?.email ?? null;
   const [resources, setResources] = React.useState<string[]>(project.resources ?? []);
   const [newResource, setNewResource] = React.useState("");
+  const [goals, setGoals] = React.useState<ProjectGoal[]>(project.goals ?? []);
+  const [newGoalTitle, setNewGoalTitle] = React.useState("");
+  const [newGoalStatus, setNewGoalStatus] = React.useState("");
 
   const projectManagers = users.filter(isProjectManager);
 
@@ -75,13 +80,17 @@ export function ProjectEditSheet({
     resolver: zodResolver(projectFormSchema),
     defaultValues: {
       name: project.name,
+      description: project.description ?? "",
+      industry: project.industry ?? "",
+      type: project.type ?? "",
       managerId: project.managerId,
       status: project.status as ProjectFormValues["status"],
       priority: project.priority as ProjectFormValues["priority"],
       progress: project.progress ?? 0,
       startDate: project.startDate ?? null,
       endDate: project.endDate ?? null,
-      resources: project.resources ?? []
+      resources: project.resources ?? [],
+      goals: project.goals ?? []
     }
   });
 
@@ -89,16 +98,23 @@ export function ProjectEditSheet({
     if (!open) return;
     form.reset({
       name: project.name,
+      description: project.description ?? "",
+      industry: project.industry ?? "",
+      type: project.type ?? "",
       managerId: project.managerId,
       status: project.status as ProjectFormValues["status"],
       priority: project.priority as ProjectFormValues["priority"],
       progress: project.progress ?? 0,
       startDate: project.startDate ?? null,
       endDate: project.endDate ?? null,
-      resources: project.resources ?? []
+      resources: project.resources ?? [],
+      goals: project.goals ?? []
     });
     setResources(project.resources ?? []);
     setNewResource("");
+    setGoals(project.goals ?? []);
+    setNewGoalTitle("");
+    setNewGoalStatus("");
   }, [open, project, form]);
 
   function addResource() {
@@ -116,11 +132,37 @@ export function ProjectEditSheet({
     form.setValue("resources", next);
   }
 
+  function addGoal() {
+    const title = newGoalTitle.trim();
+    if (!title) return;
+    const next = [...goals, { title, status: newGoalStatus.trim(), done: false }];
+    setGoals(next);
+    form.setValue("goals", next);
+    setNewGoalTitle("");
+    setNewGoalStatus("");
+  }
+
+  function toggleGoal(index: number) {
+    const next = goals.map((goal, i) => (i === index ? { ...goal, done: !goal.done } : goal));
+    setGoals(next);
+    form.setValue("goals", next);
+  }
+
+  function removeGoal(index: number) {
+    const next = goals.filter((_, i) => i !== index);
+    setGoals(next);
+    form.setValue("goals", next);
+  }
+
   async function onSubmit(data: ProjectFormValues) {
     data.resources = resources;
+    data.goals = goals;
     try {
       await updateDoc(doc(db, "projects", project.id), {
         name: data.name.trim(),
+        description: data.description?.trim() || null,
+        industry: data.industry?.trim() || null,
+        type: data.type?.trim() || null,
         managerId: data.managerId,
         status: data.status,
         priority: data.priority,
@@ -128,6 +170,7 @@ export function ProjectEditSheet({
         startDate: data.startDate ? Timestamp.fromDate(data.startDate) : null,
         endDate: data.endDate ? Timestamp.fromDate(data.endDate) : null,
         resources: data.resources,
+        goals: data.goals,
         updatedAt: serverTimestamp()
       });
 
@@ -152,11 +195,15 @@ export function ProjectEditSheet({
       }
       const otherChanges =
         data.name.trim() !== project.name ||
+        (data.description?.trim() || "") !== (project.description?.trim() || "") ||
+        (data.industry?.trim() || "") !== (project.industry?.trim() || "") ||
+        (data.type?.trim() || "") !== (project.type?.trim() || "") ||
         data.managerId !== project.managerId ||
         data.priority !== project.priority ||
         (data.startDate?.getTime() ?? null) !== (project.startDate?.getTime() ?? null) ||
         (data.endDate?.getTime() ?? null) !== (project.endDate?.getTime() ?? null) ||
-        JSON.stringify(data.resources) !== JSON.stringify(project.resources);
+        JSON.stringify(data.resources) !== JSON.stringify(project.resources) ||
+        JSON.stringify(data.goals) !== JSON.stringify(project.goals);
       if (otherChanges) {
         await appendProjectActivity({
           projectId: project.id,
@@ -197,6 +244,52 @@ export function ProjectEditSheet({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Short summary shown in the project header"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="industry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Industry</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. SaaS · HR-tech" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Content engine" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -419,6 +512,60 @@ export function ProjectEditSheet({
                   }}
                 />
                 <Button type="button" variant="outline" size="icon" onClick={addResource}>
+                  <Plus />
+                </Button>
+              </div>
+            </FormItem>
+
+            <FormItem>
+              <FormLabel>Goals</FormLabel>
+              <div className="space-y-2">
+                {goals.map((goal, index) => (
+                  <div key={`${goal.title}-${index}`} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={goal.done}
+                      onCheckedChange={() => toggleGoal(index)}
+                      aria-label={`Mark ${goal.title} as done`}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm">{goal.title}</span>
+                    {goal.status ? (
+                      <span className="text-muted-foreground shrink-0 text-xs">{goal.status}</span>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-400"
+                      onClick={() => removeGoal(index)}>
+                      <X />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                <Input
+                  value={newGoalTitle}
+                  onChange={(e) => setNewGoalTitle(e.target.value)}
+                  placeholder="Goal title"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addGoal();
+                    }
+                  }}
+                />
+                <Input
+                  value={newGoalStatus}
+                  onChange={(e) => setNewGoalStatus(e.target.value)}
+                  placeholder="Status, e.g. 16 / 24 published"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addGoal();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" size="icon" onClick={addGoal}>
                   <Plus />
                 </Button>
               </div>

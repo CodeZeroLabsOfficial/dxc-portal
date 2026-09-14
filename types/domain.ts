@@ -3,10 +3,19 @@ import type { ServiceRequestStage } from "./user";
 export type ProjectStatus = "active" | "delayed" | "at_risk" | "completed";
 export type ProjectPriority = "low" | "medium" | "high";
 
+export type ProjectGoal = {
+  title: string;
+  status: string;
+  done: boolean;
+};
+
 export type Project = {
   id: string;
   clientId: string;
   name: string;
+  description?: string | null;
+  industry?: string | null;
+  type?: string | null;
   managerId: string;
   status: ProjectStatus;
   priority: ProjectPriority;
@@ -19,6 +28,7 @@ export type Project = {
     spent: number;
     currency: string;
   };
+  goals: ProjectGoal[];
   createdBy: string;
   createdAt?: Date | null;
   updatedAt?: Date | null;

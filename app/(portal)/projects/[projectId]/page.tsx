@@ -16,7 +16,7 @@ import { Pencil } from "lucide-react";
 
 import { db } from "@/lib/firebase";
 import { appendProjectActivity } from "@/lib/project-activity";
-import { mapProjectDoc, toProjectDate } from "@/lib/projects";
+import { averageProgress, mapProjectDoc, toProjectDate } from "@/lib/projects";
 import { useActiveClient } from "@/hooks/use-active-client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Project, ProjectIssue, ProjectRisk, ProjectSubtask, UserProfile } from "@/types";
@@ -30,7 +30,7 @@ import { ProjectDeleteDialog } from "./components/project-delete-dialog";
 import { ProjectDetailCard } from "./components/project-detail-card";
 import { ProjectEditSheet } from "./components/project-edit-sheet";
 import { ProjectOverviewPanel } from "./components/project-overview-panel";
-import { ProjectRisksIssuesPanel } from "./components/project-risks-issues-panel";
+import { ProjectIssuesPanel, ProjectRisksPanel } from "./components/project-risks-issues-panel";
 import { ProjectSubtasksPanel } from "./components/project-subtasks-panel";
 
 export default function ProjectDetailPage() {
@@ -50,6 +50,8 @@ export default function ProjectDetailPage() {
   const [spent, setSpent] = useState("0");
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [tab, setTab] = useState("overview");
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
 
   useEffect(() => {
     void getDocs(collection(db, "users")).then((snap) => {
@@ -61,7 +63,8 @@ export default function ProjectDetailPage() {
             displayName: data.displayName ?? "User",
             email: data.email ?? "",
             role: data.role ?? "staff",
-            jobTitle: data.jobTitle ?? null
+            jobTitle: data.jobTitle ?? null,
+            photoURL: data.photoURL ?? null
           };
         })
       );
@@ -176,6 +179,28 @@ export default function ProjectDetailPage() {
     toast.success("Finance updated");
   }
 
+  async function toggleTask(id: string, nextDone: boolean) {
+    const current = subtasks.find((item) => item.id === id);
+    if (!current) return;
+    const progress = nextDone ? 100 : 0;
+    const status = nextDone ? "done" : "todo";
+    await updateDoc(doc(db, "projects", projectId, "subtasks", id), { progress, status });
+    const next = subtasks.map((item) =>
+      item.id === id ? { ...item, progress, status } : item
+    );
+    await updateDoc(doc(db, "projects", projectId), {
+      progress: averageProgress(next.map((item) => item.progress))
+    });
+    await appendProjectActivity({
+      projectId,
+      type: "subtask_progress",
+      title: nextDone ? "Task completed" : "Task reopened",
+      description: current.title,
+      actorId,
+      actorName
+    });
+  }
+
   const clientName = activeClient?.name?.trim() || "—";
 
   if (!project) {
@@ -199,34 +224,50 @@ export default function ProjectDetailPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="overview" className="gap-4">
-        <ProjectDetailCard project={project} />
+      <Tabs value={tab} onValueChange={setTab} className="gap-4">
+        <ProjectDetailCard project={project} logoURL={activeClient?.logoURL} />
 
         <TabsContent value="overview" className="space-y-4">
           <ProjectOverviewPanel
             project={project}
             clientName={clientName}
             managerName={managerName}
+            users={users}
             subtasks={subtasks}
-            risks={risks}
-            issues={issues}
+            onViewAllTasks={() => setTab("tasks")}
+            onNewTask={() => {
+              setTab("tasks");
+              setTaskSheetOpen(true);
+            }}
+            onAddTeam={() => setEditOpen(true)}
+            onToggleTask={(id, nextDone) => void toggleTask(id, nextDone)}
           />
         </TabsContent>
 
-        <TabsContent value="subtasks" className="space-y-4">
+        <TabsContent value="tasks" className="space-y-4">
           <ProjectSubtasksPanel
             projectId={projectId}
             subtasks={subtasks}
             users={users}
             actorId={actorId}
             actorName={actorName}
+            createOpen={taskSheetOpen}
+            onCreateOpenChange={setTaskSheetOpen}
           />
         </TabsContent>
 
         <TabsContent value="risks" className="space-y-4">
-          <ProjectRisksIssuesPanel
+          <ProjectRisksPanel
             projectId={projectId}
             risks={risks}
+            actorId={actorId}
+            actorName={actorName}
+          />
+        </TabsContent>
+
+        <TabsContent value="issues" className="space-y-4">
+          <ProjectIssuesPanel
+            projectId={projectId}
             issues={issues}
             actorId={actorId}
             actorName={actorName}
@@ -245,7 +286,7 @@ export default function ProjectDetailPage() {
               <Input value={spent} onChange={(e) => setSpent(e.target.value)} type="number" />
             </div>
           </div>
-          <Button onClick={() => void saveFinance()}>Save finance</Button>
+          <Button onClick={() => void saveFinance()}>Save financials</Button>
         </TabsContent>
       </Tabs>
 

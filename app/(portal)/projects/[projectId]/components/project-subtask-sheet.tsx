@@ -131,7 +131,7 @@ export function ProjectSubtaskSheet({
           },
           "update"
         );
-        toast.success("Subtask updated");
+        toast.success("Task updated");
       } else {
         const created = await addDoc(collection(db, "projects", projectId, "subtasks"), {
           ...payload,
@@ -150,12 +150,12 @@ export function ProjectSubtaskSheet({
           },
           "create"
         );
-        toast.success("Subtask added");
+        toast.success("Task added");
       }
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error(isEdit ? "Unable to update subtask" : "Unable to add subtask");
+      toast.error(isEdit ? "Unable to update task" : "Unable to add task");
     }
   }
 
@@ -163,7 +163,7 @@ export function ProjectSubtaskSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{isEdit ? "Edit subtask" : "Add subtask"}</SheetTitle>
+          <SheetTitle>{isEdit ? "Edit task" : "Add task"}</SheetTitle>
         </SheetHeader>
 
         <Form {...form}>
@@ -175,7 +175,7 @@ export function ProjectSubtaskSheet({
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter subtask title" {...field} />
+                    <Input placeholder="Enter task title" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -260,7 +260,7 @@ export function ProjectSubtaskSheet({
                   <FormControl>
                     <div className="flex w-full items-center justify-between gap-2">
                       <Slider
-                        aria-label="Subtask progress"
+                        aria-label="Task progress"
                         min={0}
                         max={100}
                         step={1}

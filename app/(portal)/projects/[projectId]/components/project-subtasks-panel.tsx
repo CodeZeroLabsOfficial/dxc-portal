@@ -54,6 +54,8 @@ type ProjectSubtasksPanelProps = {
   users: UserProfile[];
   actorId?: string | null;
   actorName?: string | null;
+  createOpen?: boolean;
+  onCreateOpenChange?: (open: boolean) => void;
 };
 
 export function ProjectSubtasksPanel({
@@ -61,13 +63,35 @@ export function ProjectSubtasksPanel({
   subtasks,
   users,
   actorId = null,
-  actorName = null
+  actorName = null,
+  createOpen = false,
+  onCreateOpenChange
 }: ProjectSubtasksPanelProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<SubtaskStatus | null>(null);
   const [filterAssignee, setFilterAssignee] = React.useState<string[]>([]);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!createOpen) return;
+    setEditId(null);
+    setSheetOpen(true);
+  }, [createOpen]);
+
+  function openCreate() {
+    setEditId(null);
+    setSheetOpen(true);
+    onCreateOpenChange?.(true);
+  }
+
+  function handleSheetOpenChange(open: boolean) {
+    setSheetOpen(open);
+    if (!open) {
+      setEditId(null);
+      onCreateOpenChange?.(false);
+    }
+  }
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
   const sensors = useSensors(
@@ -137,7 +161,7 @@ export function ProjectSubtasksPanel({
     await appendProjectActivity({
       projectId,
       type: "subtask_progress",
-      title: nextDone ? "Subtask completed" : "Subtask reopened",
+      title: nextDone ? "Task completed" : "Task reopened",
       description: current.title,
       actorId,
       actorName
@@ -153,7 +177,7 @@ export function ProjectSubtasksPanel({
     await appendProjectActivity({
       projectId,
       type: mode === "create" ? "subtask_added" : "subtask_progress",
-      title: mode === "create" ? "Subtask added" : "Subtask updated",
+      title: mode === "create" ? "Task added" : "Task updated",
       description: subtask.title,
       actorId,
       actorName
@@ -173,7 +197,7 @@ export function ProjectSubtasksPanel({
       batch.update(doc(db, "projects", projectId, "subtasks", item.id), { order: item.order });
     }
     await batch.commit();
-    toast.success("Subtasks reordered");
+    toast.success("Tasks reordered");
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -212,14 +236,14 @@ export function ProjectSubtasksPanel({
     <div className="space-y-4">
       <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
         <div className="text-muted-foreground text-sm">
-          {filtered.length} of {sorted.length} subtasks
+          {filtered.length} of {sorted.length} tasks
         </div>
 
         <div className="flex w-full items-center gap-2 lg:w-auto">
           <div className="relative grow lg:grow-0">
             <Search className="absolute top-2.5 left-3 size-4 opacity-50" />
             <Input
-              placeholder="Search subtasks..."
+              placeholder="Search tasks..."
               className="ps-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -303,15 +327,12 @@ export function ProjectSubtasksPanel({
               <TooltipTrigger asChild>
                 <Button
                   size="icon"
-                  onClick={() => {
-                    setEditId(null);
-                    setSheetOpen(true);
-                  }}>
+                  onClick={openCreate}>
                   <Plus />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Add subtask</p>
+                <p>Add task</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -325,8 +346,8 @@ export function ProjectSubtasksPanel({
               <ListTodo className="text-muted-foreground/50 size-10" aria-hidden />
             </EmptyMedia>
             <EmptyDescription className="max-w-sm space-y-2">
-              <p>No subtasks found</p>
-              <p>Add a subtask to get started.</p>
+              <p>No tasks found</p>
+              <p>Add a task to get started.</p>
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -378,10 +399,7 @@ export function ProjectSubtasksPanel({
         projectId={projectId}
         users={users}
         open={sheetOpen}
-        onOpenChange={(open) => {
-          setSheetOpen(open);
-          if (!open) setEditId(null);
-        }}
+        onOpenChange={handleSheetOpenChange}
         editSubtask={editSubtask}
         nextOrder={sorted.length}
         onSaved={(subtask, mode) => void handleSaved(subtask, mode)}
